@@ -1,10 +1,9 @@
 <?php
 /*
 	Plugin Name: Team Eight Project Management - Alpha
-	Description: Alpha release on January 1st 2013!
+	Description: Alpha release on Nov 10th 2013!
 	Version: 1.0
-	Author: Andrew Mowe
-	Author: Spencer Hansen
+	Author: Andrew Mowe, Spencer Hansen
 	Author URI: http://www.team-eight.com
 	License: GPLv2
 */
