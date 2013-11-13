@@ -102,71 +102,45 @@ $task_status = array( "Current", "Submitted", "Completed");
 		<?php $i=0;
 		// echo '<pre>'; print_r( $t8_pm_p_tasks ); echo '</pre>';
 		wp_nonce_field('check','t8_pm_nonce');
-		foreach($t8_pm_p_tasks as $task_key => $task_data){
-				$task_num = $task_key+1; $i++; 
+		foreach($t8_pm_p_tasks as $tid => $task){
+				$task_num = $tid+1; $i++; 
 				?>
-			<tr id="t8-pm-task-<?php echo $task_key; ?>" class="task <?php if($i%2) echo 'alternate'; ?>" valign="top">
+			<tr id="t8-pm-task-<?php echo $tid; ?>" class="task <?php if($i%2) echo 'alternate'; ?>" valign="top">
 				<td class="task-title column-title" >
-					<?php echo $task_data['task-title']; ?>
+					<?php echo $task['task-title']; ?>
 					<div class="row-actions"> 
 						<a class="inline-edit-task" href="#" >View Task and Subtasks</a>
 					</div>
 				</td>
 				<td class="task-stage num">
-					<?php echo $task_data['stage']; ?>
+					<?php echo $task['stage']; ?>
 				</td>
-				<td class="task-assign <?php echo 'user-'. $pm_users[$task_data['assign']]['uslug']; if($current_user->display_name != $pm_users[$task_data['assign']]["uname"]) echo ' not-curr-user'; ?>">
-					<?php echo $pm_users[$task_data['assign']]["uname"]; ?>
+				<td class="task-assign <?php echo 'user-'. $pm_users[$task['assign']]['uslug']; if($current_user->display_name != $pm_users[$task['assign']]["uname"]) echo ' not-curr-user'; ?>">
+					<?php echo $pm_users[$task['assign']]["uname"]; ?>
 				</td>
 				<td class="task-status">
-				<?php 
-				$t8_pm_inreview_cbox = '<input type="checkbox" name="review[]" checked class="t8-pm-task-review" value="'.$task_key.'" /> <span>In Review</span>';
-				$t8_pm_submit_cbox = '<input type="checkbox" name="review[]" class="t8-pm-task-review" value="'.$task_key.'" /> <span>Submit for Review</span>';
-				$t8_pm_complete_cbox = '<input type="checkbox" name="complete[]" class="t8-pm-task-review" value="'.$task_key.'" /> ';
-				$t8_pm_uncomplete_cbox = '<input type="checkbox" name="complete[]" checked class="t8-pm-task-review" value="'.$task_key.'" /> ';
-				if( $task_data['stage'] == '0' ) { 
-					echo 'Ongoing';	
-				}elseif( $task_data['status'] == '0' ) { 
-					if( $t8_pm_proj_manager  == $current_user->ID ) { 
-						echo $t8_pm_complete_cbox.'<span>Mark as Complete</span>';
-					}elseif( $task_data['assign']  == $current_user->ID ) { 
-						echo $t8_pm_submit_cbox;
-					}else{
-						echo 'Incomplete';	
-					} 
-				}elseif( $task_data['status'] == '1' ) { 
-					if( $t8_pm_proj_manager  == $current_user->ID ) { 
-						echo $t8_pm_complete_cbox.'<span>Approve as Complete</span>';
-					}else{
-						echo $t8_pm_inreview_cbox;	
-					}
-				}elseif( $task_data['status'] == '2' ) { 
-					if( $t8_pm_proj_manager  == $current_user->ID || $task_data['assign']  == $current_user->ID ) { 
-						echo $t8_pm_uncomplete_cbox;
-					}
-					echo '<span>Completed</span>';
-				} ?>
+					<?php t8_pm_task_statuses( $tid, $task ); ?>
 				</td>
-				<td class="task-subtasks num"><?php if($task_data["subtasks"] && $task_data["subtasks"][0]["s-title"] != "") echo count($task_data["subtasks"]);?></td>
+				<td class="task-subtasks num"><?php if($task["subtasks"] && $task["subtasks"][0]["s-title"] != "") echo count($task["subtasks"]);?></td>
 				<td class="task-hours num">
-					<?php echo $task_data['est-hours']; ?>
+					<?php echo $task['est-hours']; ?>
 				</td>
 			</tr>
 			<tr class="inline-editor-task hidden">
 				<td class="colspanchange" colspan="7">
 					 <table class="form-table">
 						<tr>
-						   <p> Task Description: <?php echo $task_data['task-desc']; ?></p>
+						   <p> Task Description: <?php echo $task['task-desc']; ?></p>
 						</tr>
 						<tr>
-							<th scope="row"><label for="task[<?php echo $task_key; ?>][notes]">Notes</label><br><span></span></th>
+							<th scope="row"><label for="task[<?php echo $tid; ?>][notes]">Notes</label><br><span></span></th>
 							<td>
-								<textarea name="task[<?php echo $task_key; ?>][notes]" class="task-<?php echo $task_key; ?>-notes" cols="40" rows="4"><?php echo $task_data['task-notes']; ?></textarea><br />
-								<a href="#" class="button-secondary t8-pm-savenotes task-<?php echo $task_key; ?>" >Save Notes</a>
+								<textarea name="task[<?php echo $tid; ?>][notes]" class="task-<?php echo $tid; ?>-notes" cols="40" rows="4"><?php echo $task['task-notes']; ?></textarea><br />
+								<a href="#" class="button-secondary t8-pm-savenotes task-<?php echo $tid; ?>" >Save Notes</a>
 							</td>
 						</tr>
 					</table>
-						<?php if($task_data["subtasks"] && $task_data["subtasks"][0]["s-title"] != ""){ ?>
+						<?php if($task["subtasks"] && $task["subtasks"][0]["s-title"] != ""){ ?>
 					<div class="subtasks">
 						<table class="form-table">
 							<thead>
@@ -188,14 +162,14 @@ $task_status = array( "Current", "Submitted", "Completed");
 								</tr>
 							</tfoot>
 							<tbody>
-			 <?php    foreach($task_data["subtasks"] as $st_index => $subtask){ // loop through the subtasks within this task ?>
+			 <?php    foreach($task["subtasks"] as $st_index => $subtask){ // loop through the subtasks within this task ?>
 						<tr class="subtask sbt-<?php echo $st_index; ?>">
 							<td class="task-title column-title" >
 								<?php echo $subtask['s-title']; ?>
 							</td>
 							<td><?php echo $subtask['s-desc']; ?></td>
 							<td class="caps" <?php
-					foreach($task_data["subtasks"] as $sub) {
+					foreach($task["subtasks"] as $sub) {
 						if($sub['s-assign'] == $current_user->ID) { ?>
 							style="background: #<?php echo $user_color; ?>"
 				<?php		break;
@@ -206,11 +180,11 @@ $task_status = array( "Current", "Submitted", "Completed");
 							</td>
 							<td class="task-status">
 								<?php 
-								if( $task_data['stage'] == '0' ) { 
+								if( $task['stage'] == '0' ) { 
 									echo 'Ongoing';	
-								}elseif( $task_data['status'] == '0' ) { 
+								}elseif( $task['status'] == '0' ) { 
 									echo 'Incomplete';	
-								}elseif( $task_data['status'] == '1' ) { 
+								}elseif( $task['status'] == '1' ) { 
 									echo 'In Review';	
 								}else{
 									echo 'Completed';
@@ -227,7 +201,7 @@ $task_status = array( "Current", "Submitted", "Completed");
 			  </td>
 			</tr>
 
-<?php 	} // end foreach($t8_pm_p_tasks as $task_key => $task_data) ?>
+<?php 	} // end foreach($t8_pm_p_tasks as $tid => $task) ?>
 		</tbody>
 	</table>    
 </div>

@@ -22,11 +22,6 @@ $year2day = $today['year'];
 	
 global $wpdb;
 	$wpdb->show_errors = true;
-	//Open Project list
-	function custom_sort($a, $b) { // !!! this needs a unique name and to be moved to functions
-		return $a["stage"] > $b["stage"];
-	}
-
 	//Client list
 	$cli_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . 'pm_cli' ); // collect Client names and id
 	if($cli_results){ foreach($cli_results as $client){ // build array with id as key
@@ -74,10 +69,13 @@ global $wpdb;
 					}else{
 						foreach( $todoR as $rday => $tasks ){
 							if($rday < $day2day){ // this item in the dayplanner is so yesterday or before !!! good way to check if user hasn't logged in in awhile
-								foreach($tasks as $tasktype => $taskr ) {
-									foreach( $taskr as $bumindex => $task ) {
-										if ( !in_array( $task, $dayplanner[$year2day][$day2day][$tasktype])) 
-											$dayplanner[$year2day][$day2day][$tasktype][] = $task; // update these old todos to today
+								if( is_array($tasks) ){
+									foreach($tasks as $tasktype => $taskr ) {
+										foreach( $taskr as $bumindex => $task ) {
+											if( !isset($dayplanner[$year2day][$day2day][$tasktype]) ) $dayplanner[$year2day][$day2day][$tasktype] = array();
+											if ( !in_array( $task, $dayplanner[$year2day][$day2day][$tasktype])) 
+												$dayplanner[$year2day][$day2day][$tasktype][] = $task; // update these old todos to today
+										}
 									}
 								}
 								$t8_pm_update_plnnr = 1;
@@ -219,7 +217,7 @@ global $wpdb;
 					$t8_pm_p_tasks[$assign->id]['type'] = 'assign';
 				}
 			}
-			if(!empty($t8_pm_p_tasks)) uasort($t8_pm_p_tasks, "custom_sort");
+			if(!empty($t8_pm_p_tasks)) uasort($t8_pm_p_tasks, "t8_pm_custom_sort");
 			$task_status = array( "Current", "Submitted", "Completed");
 
 			
@@ -238,11 +236,12 @@ global $wpdb;
 		$punchin = get_user_meta( $current_user->ID, "punchin", true);
 		if(!empty($punchin ) ){
 			$startTimer = $punchin['start_time'];
-			$t8_pm_cpt_sels = t8_pm_cli_proj_task_selects( 1, 0, 0, 0, $punchin );
-			$punchin = $t8_pm_cpt_sels['punchin'];
+			$t8_pm_cpt_sels = t8_pm_cli_proj_task_selects( 1, $punchin['cli'], $punchin['proj'], $punchin['task'] );
+			//$punchin = $t8_pm_cpt_sels['punchin'];
 		} else {
 			$t8_pm_cpt_sels = t8_pm_cli_proj_task_selects( 1 );
-		} ?>
+		} 
+		?>
 	<div id="dashboard-wrap" class="cf">
         <?php if( ($showday[0] + 60 ) > $today[0] ) { ?>
 		<div class="dashboard all-tasks">
@@ -269,28 +268,7 @@ global $wpdb;
                     <div class="extras">
                         <span class="mstone"><?php print_r( $projnames[$task['proj-id']]['mstones'][$task['stage']]['name'] ); ?></span>
                         <div class="task-status rdts">
-                            <?php 
-                            $t8_pm_inreview_cbox = '<span>In Review</span> <input type="checkbox" name="review[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
-                            $t8_pm_submit_cbox = '<span>Submit for Review</span> <input type="checkbox" name="review[]" class="t8-pm-task-status" value="'.$tid.'" />';
-                            $t8_pm_complete_cbox = ' <input type="checkbox" name="complete[]" class="t8-pm-task-status" value="'.$tid.'" />';
-                            $t8_pm_uncomplete_cbox = ' <input type="checkbox" name="complete[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
-                            if( $task['stage'] == '0' ) { 
-                                echo 'Ongoing';	
-                            }elseif( $task['status'] == '0' ) { 
-                                if( $task['proj-man'] == $current_user->ID ) { 
-                                    echo '<span>Mark as Complete</span>' . $t8_pm_complete_cbox;
-                                }elseif( $task['assign']  == $current_user->ID ) { 
-                                    echo $t8_pm_submit_cbox;
-                                }else{
-                                    echo 'Incomplete';	
-                                } 
-                            }elseif( $task['status'] == '1' ) { 
-                                echo ( $task['proj-man'] == $current_user->ID ? '<span>Approve as Complete</span>' . $t8_pm_complete_cbox : $t8_pm_inreview_cbox );
-                            }elseif( $task['status'] == '2' ) { 
-                                if( $task['proj-man'] == $current_user->ID || $task['assign']  == $current_user->ID ) echo $t8_pm_uncomplete_cbox;
-                                echo '<span>Completed</span>';
-                            }else{ echo 'status: ' . $task['status']; }
-                        ?>
+                            <?php t8_pm_task_statuses( $tid = 0, $task ) ?>
                        </div>
                     </div>
                 </div>
@@ -352,6 +330,7 @@ global $wpdb;
                         $t8_pm_submit_cbox = '<span>Submit for Review</span> <input type="checkbox" name="review[]" class="t8-pm-task-status" value="'.$tid.'" />';
                         $t8_pm_complete_cbox = ' <input type="checkbox" name="complete[]" class="t8-pm-task-status" value="'.$tid.'" />';
                         $t8_pm_uncomplete_cbox = ' <input type="checkbox" name="complete[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
+                        if( !isset($task['proj-man']) ) $task['proj-man'] = '';
                         if( $task['stage'] == '0' ) { 
                             echo 'Ongoing';	
                         }elseif( $task['status'] == '0' ) { 
@@ -386,7 +365,8 @@ global $wpdb;
                </div>
             </div>
         </div>
-        <?php } // end if( ($showday[0] + 60 ) > $today[0] ) ?>
+        <?php } // end if( ($showday[0] + 60 ) > $today[0] ) 
+        ?>
 
 
         <div class="today-wrap">
@@ -486,6 +466,7 @@ global $wpdb;
                                             $t8_pm_submit_cbox = '<span>Submit for Review</span> <input type="checkbox" name="review[]" class="t8-pm-task-status" value="'.$tid.'" />';
                                             $t8_pm_complete_cbox = ' <input type="checkbox" name="complete[]" class="t8-pm-task-status" value="'.$tid.'" />';
                                             $t8_pm_uncomplete_cbox = ' <input type="checkbox" name="complete[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
+                                            if( !isset($projnames[$task->proj_id]['proj_manager'])) $projnames[$task->proj_id]['proj_manager'] = '';
                                             if( $task['stage'] == '0' ) { 
                                                 echo 'Ongoing';	
                                             }elseif( $task['status'] == '0' ) { 

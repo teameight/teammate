@@ -1,29 +1,4 @@
 <?php
-//	wp_register_script('pm-andrew', plugin_dir_path(__FILE__).'js/pm-andrew.js', array('jquery','editor'), '1.0', true);
-	//wp_register_script('pm-andrew2', plugin_dir_path(__FILE__).'js/pm-andrew2.js',array('jquery','editor'), '1.0', true);
-//	wp_enqueue_script('pm-andrew');
-//	wp_enqueue_script('pm-andrew2');
-
-global $wpdb; //set ur globals
-
-$user_query = new WP_User_Query( array( 'orderby' => 'display_name') );
-if ( ! empty( $user_query->results ) ) {
-	foreach ( $user_query->results as $user ) {
-		$pm_users[$user->ID] = array( // build users array with id, name and slug
-			"uname" => $user->display_name,
-			"uslug" => $user->user_nicename,
-			"color" => get_user_meta($user->ID, 'color', true),
-			"caps" => $user->t34m8_wp_capabilities
-		);
-	}
-	// !!! need to move this to a plugin option
-	$pm_users['all'] = array( // build users array with id, name and slug
-		"uname" => 'Everyone',
-		"uslug" => 'everyone',
-		"color" => '888888',
-		"caps" => ''
-	);
-} else { }
 ?>
 <style type="text/css">
 	.wp-list-table .column-title { width: 30%; }
@@ -43,7 +18,13 @@ if( isset($pm_users) ){
 }
 ?>
 </style>
-<?php 
+
+<?php
+
+
+
+global $wpdb; //set ur globals
+
 	//Client list
 	$cli_results = $wpdb->get_results("SELECT id, name, status FROM ".$wpdb->prefix . 'pm_cli' ); // collect Client names and id
 	if($cli_results){ foreach($cli_results as $client){ // build array with id as key

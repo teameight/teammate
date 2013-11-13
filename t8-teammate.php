@@ -82,7 +82,6 @@ function t8_pm_capacity_page() {
 
 
 function t8_pm_projects_page() {
-	//include_once("t8-vars.php");
 	include_once("t8-projects.php");
 } // end func t8_pm_projects_page
 

@@ -544,7 +544,7 @@ jQuery(document).ready(function($){
 	});
 	$('#tasks').on("click", ".delete-mstone", function(e){
 		e.preventDefault();
-		var mstone = $(this).closest('table.milestone')
+		var mstone = $(this).closest('table.t8-pm-mstone')
 		var mid = mstone.data('mid');
 		if(confirm('Delete Task? '+ mid)){
 			if($('#add-mstone').hasClass('editproj')){ // for edit project form create a hidden input for deleted tasks
@@ -579,7 +579,7 @@ jQuery(document).ready(function($){
 		} 
 	});
 	function mstoneHourtotals(){
-		$("table.milestone").each(function () { //go through each milestone and update total times
+		$("table.t8-pm-mstone").each(function () { //go through each milestone and update total times
 			var tothours = 0;
 			var mstoneid = $(this).attr('id');
 			$(this).find("input.task-esthours").each(function () {
@@ -595,7 +595,7 @@ jQuery(document).ready(function($){
 	$('#tasks').on('change', 'input.task-esthours', function () {// CREATE/EDIT project types: validate est_hours input and update project total
 		$(this).prev("p").remove(); // remove the span that may have been placed in an error
 		var str = $(this).val();
-		var tMstone = $(this).closest("table.milestone");
+		var tMstone = $(this).closest("table.t8-pm-mstone");
 		if(intRegex.test(str) || floatRegex.test(str)) {
 			mstoneHourtotals();
 		}else{
@@ -605,9 +605,9 @@ jQuery(document).ready(function($){
 	});
 		
 if ($("#tasks").length > 0){
-	var mstoneTemplate = $('div#tasks table.milestone:last').clone();
+	var mstoneTemplate = $('div#tasks table.t8-pm-mstone:last').clone();
 	var lastmstoneid = 1;
-		$('div#tasks table.milestone').each( function(){
+		$('div#tasks table.t8-pm-mstone').each( function(){
 			var eachmid = parseInt($(this).data('mid'),10);								   
 			if(lastmstoneid < eachmid){ lastmstoneid = eachmid; }							   
 		});
@@ -653,16 +653,15 @@ if ($("#tasks").length > 0){
 	$('#add-mstone').click(addMstone); // attach event
 	var addTask = function(){
 		tasksCount++;
-		var mparlist = $(this).closest('table.milestone').children("tbody.the-list:first");
+		var mparlist = $(this).closest('table.t8-pm-mstone').children("tbody.the-list:first");
 		var taskRName = 'task';
 		if($('#add-mstone').hasClass('editproj')){ taskRName = 'newtask'; } //for exisitng projects, new tasks need ther own array
 		var task = taskTemplate.clone().find(':input').each(function(){
-			this.name = this.name.replace(/task\[([0-9]+)\]/, taskRName+"["+ tasksCount +"]");
-			if(this.type != 'submit'){ this.value = "";}
-		}).end() // back to .task
-		.attr('id', 't8-pm-task-' + tasksCount) // update task id
-		.data({ tid: tasksCount, tstat: taskRName })
-		.appendTo(mparlist) // add to container
+				this.name = this.name.replace(/task\[([0-9]+)\]/, taskRName+"["+ tasksCount +"]");
+				if(this.type != 'submit'){ this.value = "";}
+			}).end() // back to .task
+			.data({ tid: tasksCount, tstat: taskRName })
+			.appendTo(mparlist) // add to container
 		updatestage();
 		mstoneHourtotals();
 	};
@@ -670,8 +669,8 @@ if ($("#tasks").length > 0){
 	
 	// SORTABLE Tasks
 	function sortable() {
-		$('tbody.the-list').sortable( {
-			connectWith: 'tbody.the-list',
+		$('.t8-pm-mstone tbody.the-list').sortable( {
+			connectWith: '.t8-pm-mstone tbody.the-list',
 			start: function() {
 				
 			},
@@ -688,10 +687,12 @@ if ($("#tasks").length > 0){
 	sortable();
 	// Update stage's in Task list
 	function updatestage() {
-		$('table.milestone').each( function(){
+		$('table.t8-pm-mstone').each( function(){
+		console.log('updatestage');
 			var mid = $(this).data('mid');
-			$(this).find('input.item-stage').each(function(){
+			$(this).find('.task-assign input').each(function(){
 				$(this).val(mid);
+				console.log(mid);
 			});
 		});
 	}
@@ -869,7 +870,7 @@ if ($("#tasks").length > 0){
 
 
 	// Task Completion Checkboxes
-	$('.dashboard').on("change", "input.t8-pm-task-status", function(e){
+	$('.dashboard, #tasks').on("change", "input.t8-pm-task-status", function(e){
 		e.preventDefault();
 		var checked = 'incomplete';
 		var level = '1';

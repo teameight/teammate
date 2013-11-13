@@ -1,4 +1,24 @@
 <?php
+global $wpdb; //set ur globals
+
+$user_query = new WP_User_Query( array( 'orderby' => 'display_name') );
+if ( ! empty( $user_query->results ) ) {
+	foreach ( $user_query->results as $user ) {
+		$pm_users[$user->ID] = array( // build users array with id, name and slug
+			"uname" => $user->display_name,
+			"uslug" => $user->user_nicename,
+			"color" => get_user_meta($user->ID, 'color', true),
+			"caps" => $user->t34m8_wp_capabilities
+		);
+	}
+	// !!! need to move this to a plugin option
+	$pm_users['all'] = array( // build users array with id, name and slug
+		"uname" => 'Everyone',
+		"uslug" => 'everyone',
+		"color" => '888888',
+		"caps" => ''
+	);
+} else { }
 
 /*
 *
@@ -57,7 +77,7 @@ function t8_pm_write_proj() {
 			$hoursums[] = $tasks[$tid]['est_hours'] = ( is_numeric( $task['hours'] ) ? $task['hours'] : intval( $task['hours'] ) );
 		}
 	}
-	if( is_array( $_POST['newtask'] ) ) {
+	if( isset( $_POST['newtask'] ) ) {
 		foreach( $_POST['newtask'] as $tid => $task ) {
 			$newtasks[$tid]['task_title'] = sanitize_text_field( $task['title'] );
 			$newtasks[$tid]['stage'] = intval( $task['stage'] );
@@ -157,6 +177,172 @@ function t8_pm_write_proj() {
 	if( empty( $return ) ) $return['warning'] = "Nothing Saved!";
 	return $return;
 } // end function t8_pm_write_proj( $proj )
+
+/**
+ * Create readout for task status select.
+ *
+ * @param  string $tid task id. 
+ * @param  array $task array including proj-man (user_id), status, stage, and assign of task. 
+ * @return  echo matched checkbox. 
+*/
+function t8_pm_task_statuses($tid = 0, $task = array() ) {
+	global $current_user;
+	$current_user = wp_get_current_user();
+
+	if(!isset($task['proj-man'])) $task['proj-man'] = 0;
+
+	$inreview_cbox = '<span>In Review</span> <input type="checkbox" name="review[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
+	$submit_cbox = '<span>Submit for Review</span> <input type="checkbox" name="review[]" class="t8-pm-task-status" value="'.$tid.'" />';
+	$complete_cbox = ' <input type="checkbox" name="complete[]" class="t8-pm-task-status" value="'.$tid.'" />';
+	$uncomplete_cbox = ' <input type="checkbox" name="complete[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
+	if( $task['stage'] == '0' ) { 
+	    echo 'Ongoing';	
+	}elseif( $task['status'] == '0' ) { 
+	    if( $task['proj-man'] == $current_user->ID ) { 
+	        echo '<span>Mark as Complete</span>' . $complete_cbox;
+	    }elseif( $task['assign']  == $current_user->ID ) { 
+	        echo $submit_cbox;
+	    }else{
+	        echo 'Incomplete';	
+	    } 
+	}elseif( $task['status'] == '1' ) { 
+	    echo ( $task['proj-man'] == $current_user->ID ? '<span>Approve as Complete</span>' . $complete_cbox : $inreview_cbox );
+	}elseif( $task['status'] == '2' ) { 
+	    echo '<span>Completed</span>';
+	    if( $task['proj-man'] == $current_user->ID || $task['assign']  == $current_user->ID ) echo $uncomplete_cbox;
+	}else{ echo 'status: ' . $task['status']; }
+} // end func t8_pm_task_statuses
+
+
+/**
+ * Create options for assign select.
+ *
+ * @param  string $selected_user user id to show as selected. 
+ * @param  bool $exclude_everyone exclude the 'Everyone' user. 
+ * @return  string $return list of options to populate a select. 
+*/
+function t8_pm_assign_select($selected_user = 0, $exclude_everyone = false ) {
+	global $pm_users;
+	$return = '';
+	if( isset($pm_users) ){ 
+		$users = $pm_users;
+		if($exclude_everyone) unset($users['all']);
+        foreach( $users as $user_id => $user ){ 
+			$selected = ( $user_id == $selected_user ? ' selected="selected"' : '' );
+			$return .= '<option value="'.$user_id.'"'.$selected.'>'.$user["uname"].'</option>'; 
+        } 
+    }
+    return $return;
+}
+
+/**
+ * Milestone and task form table.
+ *
+ * Generates a form table of tasks grouped by milestone.
+ *
+ * @param  array $mstones array of milestone and task data. 
+ *    $mstones = array(
+ *      $mid => array(
+ *          'name' => '',
+ *          'deadline' => '',
+ *          'hours' => '',
+ *          'tasks' => array(
+ *              $tid => array(
+ *                  'title' => '',
+ *                  'assign' => '',
+ *                  'hours' => '',
+ *                  'status' => '',
+ *              )
+ *          )  
+ *      )
+ *    );
+ *
+ */
+function t8_pm_mstone_form_table( $mstone = array() ){
+	global $pm_users;
+    //should validate array here or is it already done !!! ?
+    if(!empty($mstone)){
+        foreach ($mstone as $mid => $mArray) {
+
+?>
+<table class="wp-list-table widefat t8-pm-mstone" cellspacing="0" data-mid="<?php echo $mid; ?>">
+    <thead>
+        <tr>
+            <th class="m-title">
+<?php 
+	if($mid == 0){ 
+?>
+				General Tasks
+                <input type="hidden" name="mstone[<?php echo $mid; ?>][name]" value="<?php echo $mid; ?>" />
+<?php
+	}else{
+?>
+				<input placeholder="Milestone" type="text" name="mstone[<?php echo $mid; ?>][name]" value="<?php echo $mArray['name']; ?>" required="required" />
+<?php
+	}
+?>
+            </th>
+            <th><input type="text" placeholder="deadline" class="datepicker mstone-deadline" value="<?php echo $mArray['deadline']; ?>" name="mstone[<?php echo $mid; ?>][deadline]" /></th>
+            <th class="mstone-hours"><input type="hidden" size="4" name="mstone[<?php echo $mid; ?>][hours]" value="<?php echo $mArray['hours']; ?>" /> <span><?php echo $mArray['hours']; ?></span> hrs</th>
+            <th></th>
+        </tr>
+    </thead>
+
+    <tfoot>
+        <tr>
+            <th>Task Name</th>
+            <th>Assign</th>
+            <th class="num">Est Hrs</th>
+            <th><button class="add-task button" type="button">Add Task</button></th>
+        </tr>
+    </tfoot>
+
+    <tbody class="the-list">
+<?php
+
+if(!empty( $mArray['tasks'] ) ) {
+    $ti = 0;
+    foreach($mArray['tasks'] as $tid => $task){
+        $ti++;
+?>
+        <tr data-tid="<?php echo $tid; ?>" class="task<?php echo ($ti%2 ? ' alternate' : '' ); ?>" valign="top">
+            <td class="task-title" >
+                <input placeholder="Task" type="text" name="task[<?php echo $tid; ?>][title]" value="<?php echo $task['title']; ?>" required="required" />
+            </td>
+            <td class="task-assign">
+                <input type="hidden" name="task[<?php echo $tid; ?>][stage]" value="<?php echo $mid; ?>" />
+                <select name="task[<?php echo $tid; ?>][assign]">
+					<?php echo t8_pm_assign_select($task['assign']); ?>
+                </select>
+            </td>
+            <td class="task-hours num">
+                <input type="text" name="task[<?php echo $tid; ?>][hours]" value="<?php echo $task['hours']; ?>" /> hrs
+            </td>
+            <td class="task-actions">
+                <a class="delete-task">Delete</a>
+            </td>
+        </tr>
+        <?php
+    } //end foreach $task_item
+} else {
+    // no tasks ???
+}// end if tasks
+
+?>
+    </tbody>
+</table>
+<?php
+
+        } // end foreach $mstone
+    }
+
+} // end func t8_pm_mstone_form_table
+
+
+function t8_pm_custom_sort($a, $b) {
+	return $a["stage"] > $b["stage"];
+}
+
 
 /*
 *
@@ -381,6 +567,7 @@ function t8_pm_schedule( $proj_id, $t8_pm_proj_start = 0, $t8_pm_proj_end = 0 ) 
 	if( $task_results ) { 
 		foreach($task_results as $task){
 			if($task->status < 2){
+				if( !isset($punched_hours[$task->id]) ) $punched_hours[$task->id] = 0;
 				if( $punched_hours[$task->id] > $task->est_hours ) { 
 					$est_hours[$punched->task_id] = 0;
 				} else {
@@ -635,14 +822,19 @@ function t8_pm_cap_calendar( $pm_users ) {
 	<?php  
 } //end function t8_pm_display_schedule( $pm_users ) 
 
-
-function t8_pm_cli_proj_task_selects( $getcli = 0, $cli = 0, $proj = 0, $task = 0, $punchin = 0 ){
-	global $wpdb; //set ur globals
-	if(is_array($punchin)) {
-		$cli = ( isset( $punchin['cli'] ) ) ? $punchin['cli'] :0;
-		$proj = ( isset( $punchin['proj'] ) ) ? $punchin['proj'] :0;
-		$task = ( isset( $punchin['task'] ) ) ? $punchin['task'] :0;
-	}
+/**
+ * Client Project Task selects.
+ *
+ * Generates a group of selects for clients, projects, and tasks.
+ *
+ * @param  bool $getcli Whether the actions should be always visible.
+ * @param  string $cli Optional. Client id.
+ * @param  string $proj Optional. Project id.
+ * @param  string $task Optional. Task id.
+ * @return array Client, project, and/or task option lists to populate selects.
+ */
+function t8_pm_cli_proj_task_selects( $getcli = 0, $cli = 0, $proj = 0, $task = 0 ){
+	global $wpdb;
 
 	if( $getcli ){
 		// build cli select
@@ -674,7 +866,7 @@ function t8_pm_cli_proj_task_selects( $getcli = 0, $cli = 0, $proj = 0, $task = 
 	// build proj select
 	if( $cli ){
 		$addprojlist = 0;
-		$query = "SELECT id, name FROM " . $wpdb->prefix . "pm_projects WHERE status = 2 AND cli_id = " . $cli;
+		$query = "SELECT id, name FROM " . $wpdb->prefix . "pm_projects WHERE status = 1 AND cli_id = " . $cli;
 		$results = $wpdb->get_results( $query );
 		if($results){
 			$addprojlist = "<option>Project...</option>";
@@ -708,7 +900,7 @@ function t8_pm_cli_proj_task_selects( $getcli = 0, $cli = 0, $proj = 0, $task = 
 					if($msname['name'] == '0') $msname['name'] = 'Ongoing';
 					$addtasklist .= '<optgroup label="' . $msname['name'] . '">';
 					foreach($results1 as $result){ // loop through tasks
-						if( $task == $result->id && is_array( $punchin ) ) {
+						if( $task == $result->id && isset( $punchin ) ) {
 							$tem = ($result->est_hours*60)%60;
 							$punchin['est_thours'] = floor($result->est_hours) . 'h '. round($tem) . 'm'; 
 						}
@@ -723,7 +915,6 @@ function t8_pm_cli_proj_task_selects( $getcli = 0, $cli = 0, $proj = 0, $task = 
 			$return['task'] = $addtasklist;
 		}
 	}
-	if( is_array( $punchin ) ) $return['punchin'] = $punchin;
 	return $return;
 }
 function t8_pm_totals ($projquery){

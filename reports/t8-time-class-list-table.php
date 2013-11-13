@@ -13,7 +13,7 @@
 class t8_pm_Time_Table extends WP_List_Table {
 
 	function __construct(){
-		global $status, $page;
+		global $status, $page, $pm_users;
 		add_action( 'admin_head', array( &$this, 'admin_header' ) );
 
 		parent::__construct( array(
@@ -22,29 +22,8 @@ class t8_pm_Time_Table extends WP_List_Table {
 			'ajax'      => true        //does this table support ajax?
 		) );
 
-		//Set up Pm Users, is there a better way? !!!
-		$user_query = new WP_User_Query( array( 'exclude'	=>	1 ) );
-		$pm_users = array();
-		if ( ! empty( $user_query->results ) ) {
-			foreach ( $user_query->results as $user ) {
-				$pm_users[$user->ID] = array( // build users array with id, name and slug
-					"uname" => $user->display_name,
-					"uslug" => $user->user_nicename,
-					"color" => get_user_meta($user->ID, 'color', true),
-					"caps" => $user->t34m8_wp_capabilities
-				);
-			}
-			// !!! need to move this to a plugin option
-			$pm_users['all'] = array( // build users array with id, name and slug
-				"uname" => 'Everyone',
-				"uslug" => 'everyone',
-				"color" => '888888',
-				"caps" => ''
-			);
-			$this->pm_users = $pm_users;
-		} else { 
-			
-		}
+		$this->pm_users = $pm_users;
+
     }
 
 	function admin_header() {
@@ -58,8 +37,8 @@ class t8_pm_Time_Table extends WP_List_Table {
 		echo '</style>';
 	}
 	function time_data(){
-		global $wpdb;
-
+		global $wpdb, $current_user;
+		$current_user = wp_get_current_user();
 
 		// If no status, default to current
 		/*
@@ -85,9 +64,7 @@ class t8_pm_Time_Table extends WP_List_Table {
 			$time_r['edit']["ID"] = 'edit';
 			$cpt_sels = t8_pm_cli_proj_task_selects( 1 );
 			$assign .= '<select class="assign">';
-            foreach( $this->pm_users as $user_id => $user ){ 
-				$assign .= '<option value="' . $user_id . '">' . $user['uname'] . '</option>';
-			}
+            $assign .= t8_pm_assign_select( $current_user->ID, true );
             $assign .= '</select>';
 			$time_r['edit']["cli"] = '<select class="clisel">' . $cpt_sels['cli'] . '</select>';
 			$time_r['edit']["proj"] = '<select class="projsel" disabled="disabled"><option>Project...</option></select>';

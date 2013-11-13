@@ -547,16 +547,16 @@ width: 100%;
 	width: 100%;
 }
 */
-.t8-pm .milestone  {
+.t8-pm-mstone  {
 	margin-bottom:50px;
 }
-.t8-pm .milestone tfoot {
+.t8-pm-mstone tfoot {
 	
 }
-.t8-pm .milestone .task {
+.t8-pm-mstone .task {
 	cursor:move;
 }
-.t8-pm .milestone .task:hover {
+.t8-pm-mstone .task:hover {
 	background-color:#EEE;
 }
 /* OLD STYLES */
@@ -746,7 +746,7 @@ ul.task {
 #dashboard-wrap .dtask.punching {
 	background:#fcf3ef;	
 	border-left:4px solid #d54e21;
-	left:-4px;
+	padding-left: 6px;
 }
 #dashboard-wrap #planner .dtask.flyout {
 	border-left: 0;
