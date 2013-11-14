@@ -1,15 +1,32 @@
 <?php
 global $wpdb; //set ur globals
 
+$t8_pm_colors = array(
+	'FF5300',
+	'FFA400',
+	'DC0055',
+	'00AB6F',
+	'620CAC',
+	'06799F',
+	'FFBF00',
+	'B1F100',
+	'14D100',
+	'FFEF00',
+	'C10087'
+);
+
 $user_query = new WP_User_Query( array( 'orderby' => 'display_name') );
 if ( ! empty( $user_query->results ) ) {
+	$i = 0;
 	foreach ( $user_query->results as $user ) {
 		$pm_users[$user->ID] = array( // build users array with id, name and slug
 			"uname" => $user->display_name,
 			"uslug" => $user->user_nicename,
-			"color" => get_user_meta($user->ID, 'color', true),
+			"color" => $t8_pm_colors[$i],
 			"caps" => $user->t34m8_wp_capabilities
 		);
+		$i++;
+		if( $i > count($t8_pm_colors) ) $i = 0;
 	}
 	// !!! need to move this to a plugin option
 	$pm_users['all'] = array( // build users array with id, name and slug
@@ -265,7 +282,7 @@ function t8_pm_mstone_form_table( $mstone = array() ){
         foreach ($mstone as $mid => $mArray) {
 
 ?>
-<table class="wp-list-table widefat t8-pm-mstone" cellspacing="0" data-mid="<?php echo $mid; ?>">
+<table class="wp-list-table widefat t8-pm-mstone t8-pm-form" cellspacing="0" data-mid="<?php echo $mid; ?>">
     <thead>
         <tr>
             <th class="m-title">
@@ -305,7 +322,7 @@ if(!empty( $mArray['tasks'] ) ) {
     foreach($mArray['tasks'] as $tid => $task){
         $ti++;
 ?>
-        <tr data-tid="<?php echo $tid; ?>" class="task<?php echo ($ti%2 ? ' alternate' : '' ); ?>" valign="top">
+        <tr data-tid="<?php echo $tid; ?>" class="user-<?php echo $pm_users[$task['assign']]['uslug']; ?> task<?php echo ($ti%2 ? ' alternate' : '' ); ?>" valign="top">
             <td class="task-title" >
                 <input placeholder="Task" type="text" name="task[<?php echo $tid; ?>][title]" value="<?php echo $task['title']; ?>" required="required" />
             </td>
@@ -321,6 +338,89 @@ if(!empty( $mArray['tasks'] ) ) {
             <td class="task-actions">
                 <a class="delete-task">Delete</a>
             </td>
+        </tr>
+        <?php
+    } //end foreach $task_item
+} else {
+    // no tasks ???
+}// end if tasks
+
+?>
+    </tbody>
+</table>
+<?php
+
+        } // end foreach $mstone
+    }
+
+} // end func t8_pm_mstone_form_table
+
+/**
+ * Milestone and task view table.
+ *
+ * Generates a display table of tasks grouped by milestone.
+ *
+ * @param  array $mstones array of milestone and task data. 
+ *    $mstones = array(
+ *      $mid => array(
+ *          'name' => '',
+ *          'deadline' => '',
+ *          'hours' => '',
+ *          'tasks' => array(
+ *              $tid => array(
+ *                  'title' => '',
+ *                  'assign' => '',
+ *                  'hours' => '',
+ *                  'status' => '',
+ *              )
+ *          )  
+ *      )
+ *    );
+ *
+ */
+function t8_pm_mstone_view_table( $mstone = array() ){
+	global $pm_users;
+    //should validate array here or is it already done !!! ?
+    if(!empty($mstone)){
+        foreach ($mstone as $mid => $mArray) {
+
+?>
+<table class="wp-list-table widefat t8-pm-mstone t8-pm-view" cellspacing="0" data-mid="<?php echo $mid; ?>">
+    <thead>
+        <tr>
+            <th class="m-title">
+				<?php  echo ($mid == 0 ? 'General Tasks' : $mArray['name'] ); ?>
+            </th>
+            <th><?php echo $mArray['deadline']; ?></th>
+            <th class="mstone-hours"><span><?php echo $mArray['hours']; ?></span> hrs</th>
+            <th></th>
+        </tr>
+    </thead>
+
+    <tfoot>
+        <tr>
+            <th>Task Name</th>
+            <th>Assign</th>
+            <th class="num">Est Hrs</th>
+            <th></th>
+        </tr>
+    </tfoot>
+
+    <tbody class="the-list">
+<?php
+
+if(!empty( $mArray['tasks'] ) ) {
+    $ti = 0;
+    foreach($mArray['tasks'] as $tid => $task){
+        $ti++;
+?>
+        <tr data-tid="<?php echo $tid; ?>" class="user-<?php echo $pm_users[$task['assign']]['uslug']; ?> task<?php echo ($ti%2 ? ' alternate' : '' ); ?>" valign="top">
+            <td class="task-title" ><?php echo $task['title']; ?></td>
+            <td class="task-assign"><?php echo $pm_users[$task['assign']]['uname']; ?></td>
+            <td class="task-hours num"><?php echo $task['hours']; ?> hrs</td>
+            <td class="task-status">
+				<?php t8_pm_task_statuses( $tid, $task ); ?>
+			</td>
         </tr>
         <?php
     } //end foreach $task_item
@@ -409,8 +509,8 @@ function t8_pm_admin_init(){
 * 
 * Displays the project schedule chart, complete with project stats at top
 */
-function t8_pm_display_schedule( $proj_id, $pm_users ) {
-	global $wpdb;
+function t8_pm_display_schedule( $proj_id ) {
+	global $wpdb, $pm_users;
 	date_default_timezone_set("America/New_York"); // !!! need to check for user's timezone
 
 	$project = $wpdb->get_row( "SELECT * FROM ".$wpdb->prefix . "pm_projects WHERE id = ".$proj_id ); // collect Project
@@ -499,19 +599,20 @@ function t8_pm_display_schedule( $proj_id, $pm_users ) {
 							$pm_schedule2[$assign][$date] = $schedR;
 				 		}
 				 	} 
-
+//echo '<pre>'; print_r($pm_time); echo '</pre>';
 				 	foreach($pm_schedule2 as $assign => $dateR){ 
 						if($assign != ''){ ?>
 					<tr>
                     	<th scope="row" class="user-<?php echo $pm_users[$assign]["uslug"]; ?>"><?php echo $pm_users[$assign]["uname"]; ?></th>
                    		<?php foreach($dly_cpcty as $day => $capacityleft){ ?>
                   			<td><?php	
+							$hoursR = 0;
 							if( isset( $pm_time[$assign][$day]["hours"] ) ){
 								$hoursR = $pm_time[$assign][$day]["hours"];
 							} else {
 								if( isset( $dateR[$day]["hours"] ) ) $hoursR = $dateR[$day]["hours"];
 							}
-							echo round(100*$hoursR)/100;
+							if($hoursR) echo round(100*$hoursR)/100;
 							?></td>
                             <?php
 						}
@@ -548,7 +649,7 @@ function t8_pm_schedule( $proj_id, $t8_pm_proj_start = 0, $t8_pm_proj_end = 0 ) 
 			// no project exists !!! need to shut this down and throw warning
 		}
 	}
-	//if proj has already started move remaining schedule start to today
+	//if proj has already started, move remaining schedule start to today
 	if(strtotime($t8_pm_proj_start) < time() )  $nowday = date('Y-m-d', time());
 	$est_hours = $stgHrs = $punched_hours = array();
 	
@@ -574,17 +675,19 @@ function t8_pm_schedule( $proj_id, $t8_pm_proj_start = 0, $t8_pm_proj_end = 0 ) 
 					$est_hours[$task->id] = $task->est_hours;
 				}
 				
-				$tasks[$task->stage][$task->id]["est_hours"] = $task->est_hours;
-				$tasks[$task->stage][$task->id]["cnt_hours"] = $task->est_hours;
-				$tasks[$task->stage][$task->id]["assign"] = $task->assign;
-				$tasks[$task->stage][$task->id]["status"] = $task->status; // !!! if this is completed, need to remove it from schedule
-				// $tasks[$task->stage][$task->id]["due"] = date('Y-m-d', strtotime($t8_pm_proj_milestones[$task->stage]['deadline'])); // Do we need to know when its due?
+				$tasks[$task->stage][$task->id] = array(
+					"est_hours" => $task->est_hours,
+					"cnt_hours" => $task->est_hours,
+					"assign" => $task->assign,
+					"status" => $task->status // !!! if this is completed, need to remove it from schedule
+				);
 				if( !isset($stgHrs[$task->stage]) ) $stgHrs[$task->stage] = 0;
 				$stgHrs[$task->stage] += $task->est_hours;
 			}
 		}
 	}else{ //no tasks !!! throw an error or work with empty array?
 	}
+// echo '<pre>'; print_r( $tasks ); echo '</pre>';
 	
 	//Create Schedule Array based on adjusted times
 	$proj_hours = array_sum($est_hours)*1.10; // add 10% to project est_hours. 
@@ -599,29 +702,28 @@ function t8_pm_schedule( $proj_id, $t8_pm_proj_start = 0, $t8_pm_proj_end = 0 ) 
 			if($stage == 0){ // the ongoing stage. distrubute time across entire timeline
 				foreach($stgtasks as $task_id => $task){
 					$taskHours = $task["est_hours"]; //to subtract from as assigning
-					$hours = array(); //clear the array
-					$hours["task"]["assign"] = $task["assign"];
-					$hours["task"]["remainder"] = $taskHours;
-					$hours["task"]["perday"] = $taskHours/$workDays;
+					$hours = array( 
+						"assign" 	=> $task["assign"],
+						"remainder" => $taskHours,
+						"perday" 	=> $taskHours/$workDays
+					);
 					foreach($dly_cpcty as $date => $cap_in_day){
-						foreach($hours as $stask_id => $sched_task){
-							if($cap_in_day >= $sched_task["perday"]){ // room left in day after we sched this, go ahead and sched full remainder of this task
-								if($sched_task["perday"]>0){
-									$assign = $sched_task["assign"];									
-									if( !isset($pm_schedule[$date][$assign]["hours"]) ) $pm_schedule[$date][$assign]["hours"] = 0;
-									$pm_schedule[$date][$assign]["hours"] += $sched_task["perday"]; // build the schedule
-									$pm_schedule[$date][$assign]["task_times"][$task_id] = round(1000*$sched_task["perday"])/1000; // build the schedule
-									$hours[$stask_id]["remainder"] -= $sched_task["perday"];
-									$dly_cpcty["$date"] -= $sched_task["perday"];
-								}
-							}else{ // no room for this full task remainder, schedule the portion
-								$assign = $sched_task["assign"];
+						if($cap_in_day >= $hours["perday"]){ // room left in day after we sched this, go ahead and sched full remainder of this task
+							if($hours["perday"]>0){
+								$assign = $hours["assign"];									
 								if( !isset($pm_schedule[$date][$assign]["hours"]) ) $pm_schedule[$date][$assign]["hours"] = 0;
-								$pm_schedule[$date][$assign]["hours"]+=$cap_in_day; // build the schedule
-								$pm_schedule[$date][$assign]["task_times"][$task_id] = round(1000*$cap_in_day)/1000; // build the schedule
-								$hours[$stask_id]["remainder"]-=$cap_in_day;
-								$dly_cpcty["$date"]-=0;
+								$pm_schedule[$date][$assign]["hours"] += $hours["perday"]; // build the schedule
+								$pm_schedule[$date][$assign]["task_times"][$task_id] = round(1000*$hours["perday"])/1000; // build the schedule
+								$hours[$stask_id]["remainder"] -= $hours["perday"];
+								$dly_cpcty["$date"] -= $hours["perday"];
 							}
+						}else{ // no room for this full task remainder, schedule the portion
+							$assign = $hours["assign"];
+							if( !isset($pm_schedule[$date][$assign]["hours"]) ) $pm_schedule[$date][$assign]["hours"] = 0;
+							$pm_schedule[$date][$assign]["hours"]+=$cap_in_day; // build the schedule
+							$pm_schedule[$date][$assign]["task_times"][$task_id] = round(1000*$cap_in_day)/1000; // build the schedule
+							$hours["remainder"]-=$cap_in_day;
+							$dly_cpcty["$date"]-=0;
 						}
 					} 
 				}//end each task
@@ -651,7 +753,6 @@ function t8_pm_schedule( $proj_id, $t8_pm_proj_start = 0, $t8_pm_proj_end = 0 ) 
 				} //end foreach $dly_cpcty
 			}// end else stage == 0
 		}}//end if/foreach $tasks
-	//echo 'dly_cpcty <pre>'; print_r( $dly_cpcty ); echo '</pre>';
 	$sched_array = json_encode( $pm_schedule );
 	$resultsSched = $wpdb->update( $wpdb->prefix . 'pm_projects', array( 'schedule' => $sched_array ), array('id' => $proj_id) );
 	

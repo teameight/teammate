@@ -6,13 +6,14 @@
 	.wp-list-table .column-start_date, 
 	.wp-list-table .column-end_date { width: 18%; }
 <?php 
+global $pm_users;
 if( isset($pm_users) ){
 	foreach( $pm_users as $user_id => $user ) { 
 		$ucolor = $user['color'];
 		if( $ucolor && $ucolor != '' ){
 			$uslug = $user['uslug'];
-			echo ".user-$uslug { background-color: #$ucolor ; }\n";
-			echo ".wp-list-table tr.$uslug > td:first-child { border-left:4px solid #$ucolor ; }\n";
+			echo ".bar.user-$uslug { background-color: #$ucolor ; }\n";
+			echo "li .user-$uslug, .wp-list-table tr.user-$uslug > td:first-child { border-left:4px solid #$ucolor ; }\n";
 		}
 	}
 }
@@ -20,9 +21,6 @@ if( isset($pm_users) ){
 </style>
 
 <?php
-
-
-
 global $wpdb; //set ur globals
 
 	//Client list

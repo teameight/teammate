@@ -669,7 +669,7 @@ if ($("#tasks").length > 0){
 	
 	// SORTABLE Tasks
 	function sortable() {
-		$('.t8-pm-mstone tbody.the-list').sortable( {
+		$('.t8-pm-form tbody.the-list').sortable( {
 			connectWith: '.t8-pm-mstone tbody.the-list',
 			start: function() {
 				

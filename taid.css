@@ -242,22 +242,12 @@ td.num input {
 	margin:10px 0 0;
 }
 .legend li {
-	display: inline-block;
-	height: 20px;
 	margin: 0;
-	padding: 10px 30px;
-	width: 120px;
 }
-.legend span.icon {
-	background-position: 50% 0;
-	-webkit-border-radius: 2px;
-	-moz-border-radius: 2px;
-	border-radius: 2px;
+.legend span {
+	height: 2.2em;
+	padding-left: 10px;
 	display: block;
-	float: left;
-	height: 16px;
-	margin: 2px 10px 0 0;
-	width: 16px;	
 }
 
 /* X-Axis */
@@ -553,7 +543,7 @@ width: 100%;
 .t8-pm-mstone tfoot {
 	
 }
-.t8-pm-mstone .task {
+.t8-pm-form .task {
 	cursor:move;
 }
 .t8-pm-mstone .task:hover {

@@ -35,27 +35,7 @@ class t8_pm_Project_Table extends WP_List_Table {
 		echo '</style>';
 	}
 	function project_data(){
-		global $wpdb;
-		//Set up Pm Users, is there a better way? !!!
-		$user_query = new WP_User_Query( array( 'orderby' => 'display_name' ) );
-		if ( ! empty( $user_query->results ) ) {
-			foreach ( $user_query->results as $user ) {
-				$pm_users[$user->ID] = array( // build users array with id, name and slug
-					"uname" => $user->display_name,
-					"uslug" => $user->user_nicename,
-					"color" => get_user_meta($user->ID, 'color', true),
-					"caps" => $user->t34m8_wp_capabilities
-				);
-			}
-			// !!! need to move this to a plugin option
-			$pm_users['all'] = array( // build users array with id, name and slug
-				"uname" => 'Everyone',
-				"uslug" => 'everyone',
-				"color" => '888888',
-				"caps" => ''
-			);
-		} else { }
-
+		global $wpdb, $pm_users;
 		// If no status, default to current
 		/*
 		Status: 
@@ -87,7 +67,7 @@ class t8_pm_Project_Table extends WP_List_Table {
 				$projects_r[$project->id]["end_date"] = date('D M jS, Y', strtotime($project->end_date ) );
 				$projects_r[$project->id]["price"] = $t8_pm_tots_price[] = '$'.$project->price;
 				$projects_r[$project->id]["proj_manager"] = ($pm_users ? $pm_users[$project->proj_manager]['uname'] : $project->proj_manager );
-				$projects_r[$project->id]["class"] = ($pm_users ? $pm_users[$project->proj_manager]['uslug'] : $project->proj_manager );
+				$projects_r[$project->id]["class"] = ($pm_users ? 'user-'.$pm_users[$project->proj_manager]['uslug'] : 'user-'.$project->proj_manager );
 				$cli_ids[] = $project->cli_id;
 				$proj_ids[] = $project->id;
 			}
