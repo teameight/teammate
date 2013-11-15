@@ -240,12 +240,12 @@ class t8_pm_Time_Table extends WP_List_Table {
   }
 	function get_sortable_columns() {
 	  $sortable_columns = array(
-		'cli'    	=> array('cli',false),
-		'proj'   	=> array('proj',false),
-		'task'     	=> array('task',false),
-		'assign' 	=> array('assign',false),
+		'cli'    	=> array('cli_id',false),
+		'proj'   	=> array('proj_id',false),
+		'task'     	=> array('task_id',false),
+		'assign' 	=> array('user_id',false),
 		'hours'     => array('hours',false),
-		'date' 	 	=> array('date',false)
+		'date' 	 	=> array('start_time',false)
 	  );
 	  return $sortable_columns;
 	}
