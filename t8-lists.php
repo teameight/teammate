@@ -12,7 +12,7 @@ if( isset($pm_users) ){
 		$ucolor = $user['color'];
 		if( $ucolor && $ucolor != '' ){
 			$uslug = $user['uslug'];
-			echo ".bar.user-$uslug { background-color: #$ucolor ; }\n";
+			echo ".bar.user-$uslug, .bar div.user-$uslug { background-color: #$ucolor ; }\n";
 			echo "li .user-$uslug, .wp-list-table tr.user-$uslug > td:first-child { border-left:4px solid #$ucolor ; }\n";
 		}
 	}

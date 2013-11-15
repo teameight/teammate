@@ -928,7 +928,7 @@ function t8_pm_cap_calendar( $pm_users ) {
  *
  * Generates a group of selects for clients, projects, and tasks.
  *
- * @param  bool $getcli Whether the actions should be always visible.
+ * @param  bool $getcli Whether the client list needs to be populated.
  * @param  string $cli Optional. Client id.
  * @param  string $proj Optional. Project id.
  * @param  string $task Optional. Task id.
@@ -967,14 +967,14 @@ function t8_pm_cli_proj_task_selects( $getcli = 0, $cli = 0, $proj = 0, $task = 
 	// build proj select
 	if( $cli ){
 		$addprojlist = 0;
-		$query = "SELECT id, name FROM " . $wpdb->prefix . "pm_projects WHERE status = 1 AND cli_id = " . $cli;
+		$query = "SELECT id, name FROM " . $wpdb->prefix . "pm_projects WHERE status < 3 AND cli_id = " . $cli;
 		$results = $wpdb->get_results( $query );
 		if($results){
 			$addprojlist = "<option>Project...</option>";
 			foreach($results as $result){
 				$sel = '';
 				if( $proj ) $sel = ( $proj == $result->id ? ' selected="selected"' : '' );
-				$addprojlist .= '<option'.$sel.' value="'.$result->id.'">'.$result->name.'</option>';
+				$addprojlist .= '<option'.$sel.' value="'.$result->id.'">'.$result->name.'X</option>';
 			}
 		}
 		$return['proj'] = $addprojlist;
@@ -1129,7 +1129,7 @@ function t8_pm_pc_drops() {
 		if($_POST['cli']){
 			$newclient = intval($_POST['cli']);
 			$table_name = $wpdb->prefix . 'pm_projects';
-			$query = "SELECT id, name FROM ".$table_name." WHERE cli_id = ".$newclient; // status = 2 AND 
+			$query = "SELECT id, name FROM ".$table_name." WHERE status < 3 AND cli_id = ".$newclient; // status = 2 AND 
 			$results = $wpdb->get_results( $query );
 			$addprojlist = '<option>Project...</option>';
 			if($results){
@@ -1227,7 +1227,7 @@ add_action('wp_ajax_t8_pm_pc_punchin', 't8_pm_pc_punchin');
 add_action('wp_ajax_t8_pm_pc_punchout', 't8_pm_pc_punchout');
 add_action('wp_ajax_t8_pm_projtotrash', 't8_pm_projtotrash');
 add_action('wp_ajax_t8_pm_update_time_entry', 't8_pm_update_time_entry');
-
+add_action('wp_ajax_t8_pm_del_time_entry', 't8_pm_del_time_entry');
 /**
  * Projects
  */
@@ -1394,6 +1394,24 @@ function t8_pm_update_time_entry() {
 		}		
 	}
 	if ( !$results ) $return["warning"] = 'Time entry was not updated!';
+	echo json_encode($return);
+	die();
+}	
+/* Delete Time Entry */
+function t8_pm_del_time_entry() {
+   	global $wpdb;
+	if (! wp_verify_nonce($_POST['nonce'], 't8_pm_nonce') ){
+		die('Bad Nonce');
+	}
+	$time_id = intval( $_POST['time_id'] );
+
+	$table_name = $wpdb->prefix . 'pm_time';
+
+	if( $time_id ){
+		$wpdb->delete( $table_name, array( 'id' => $time_id ) );
+		$return['message'] = '<p>Time entry was deleted</p>';
+	}
+	if ( !$results ) $return["warning"] = 'Time entry was not deleted!';
 	echo json_encode($return);
 	die();
 }	

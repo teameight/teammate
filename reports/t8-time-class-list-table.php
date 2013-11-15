@@ -70,9 +70,9 @@ class t8_pm_Time_Table extends WP_List_Table {
 			$time_r['edit']["proj"] = '<select class="projsel" disabled="disabled"><option>Project...</option></select>';
 			$time_r['edit']["task"] = '<select class="tasksel" disabled="disabled"><option>Task...</option></select>'; 
 			$time_r['edit']["assign"] = $assign;
-			$time_r['edit']["hours"] = '<input type="text" name="hours" class="hours" value="">';
-			$time_r['edit']["notes"] = '<input type="text" name="notes" class="notes" placeholder="notes" value="">';
-			$time_r['edit']["date"] = '<input type="text" name="date" class="date smDtPicker" value="">';
+			$time_r['edit']["hours"] = '<input required type="text" name="hours" class="hours" value="">';
+			$time_r['edit']["notes"] = '<input required type="text" name="notes" class="notes" placeholder="notes" value="">';
+			$time_r['edit']["date"] = '<input required type="text" name="date" class="date smDtPicker" value="'. date('Y/m/d') .'">';
 			
 			$submit = sprintf('<a class="savetime" data-time="%s" title="Save these edits" href="?page=%s&action=%s&time=%s">Save</a>',$time->id,$_REQUEST['page'],'savetime',$time->id );
 			$cancel = sprintf('<a class="cancel" data-time="%s" title="Cancel editing" href="?page=%s&action=%s&time=%s">Cancel</a>',$time->id,$_REQUEST['page'],'delete',$time->id  );
@@ -165,7 +165,7 @@ class t8_pm_Time_Table extends WP_List_Table {
 		if( $item['ID'] == 'edit' ) {
 			echo '<tr class="' . ' ' . $item['class'] . '">';
 		}else{
-			echo '<tr id="time-'. $item['ID'] .'" class="' . $row_class . ' ' . $item['class'] . '">';
+			echo '<tr data-time="'. $item['ID'] .'" id="time-'. $item['ID'] .'" class="' . $row_class . ' ' . $item['class'] . '">';
 		}
 //		echo '<pre>'; print_r($item); echo '</pre>';
 		
