@@ -3,8 +3,8 @@
 if( isset($_POST['write-proj']) ){
 	$_POST['action'] = $_GET['action'];
 	$writeres = t8_pm_write_proj();
-	if( isset( $writeres['updated'] ) ) $t8_pm_updated .= $writeres['updated'];
-	if( isset( $writeres['warning'] ) ) $t8_pm_warning .= $writeres['warning'];
+	if( isset( $writeres['updated'] ) ) $t8_pm_updated = $writeres['updated'];
+	if( isset( $writeres['warning'] ) ) $t8_pm_warning = $writeres['warning'];
 	$_GET['action'] = 'edit';
 } 
 include_once( plugin_dir_path(__FILE__).'t8-lists.php' ); // !!! I'm calling this everywhere, need to only call when needed, address creating globals
@@ -101,6 +101,7 @@ $user_color = $pm_users[$current_user->ID]['color'];
 		<?php 
 			$t8_pm_projtable = new t8_pm_Project_Table();
 			echo '<h2>Projects <a href="?page=' . $_REQUEST['page'] . '&action=new" class="add-new-h2">Add New</a></h2>'; 
+			if ( function_exists('wp_nonce_field') ) wp_nonce_field('t8_pm_nonce','t8_pm_nonce');
 			$t8_pm_projtable->views(); 
 			$t8_pm_projtable->prepare_items(); 
 			$t8_pm_projtable->display(); 

@@ -60,50 +60,64 @@ class t8_pm_Time_Table extends WP_List_Table {
 		$cli_ids = $time_r = $proj_ids = $task_ids = array();
 		$time_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_time WHERE DATE(start_time) BETWEEN '" . $start . "' AND '" . $end . "' " . $user . "ORDER BY $orderby DESC" ); // collect Time based on Query	
 		if($time_results){ 
-			// build the first row as a blank edit form
-			$time_r['edit']["ID"] = 'edit';
+
+			$submit = sprintf('<a class="savetime" title="Save these edits" href="?page=%s&action=%s">Save</a>', $_REQUEST['page'], 'savetime' );
+			$cancel = sprintf('<a class="cancel" title="Cancel editing" href="?page=%s&action=%s">Cancel</a>', $_REQUEST['page'], 'delete'  );
 			$cpt_sels = t8_pm_cli_proj_task_selects( 1 );
-			$assign .= '<select class="assign">';
+			$assign = '<select class="assign">';
             $assign .= t8_pm_assign_select( $current_user->ID, true );
             $assign .= '</select>';
-			$time_r['edit']["cli"] = '<select class="clisel">' . $cpt_sels['cli'] . '</select>';
-			$time_r['edit']["proj"] = '<select class="projsel" disabled="disabled"><option>Project...</option></select>';
-			$time_r['edit']["task"] = '<select class="tasksel" disabled="disabled"><option>Task...</option></select>'; 
-			$time_r['edit']["assign"] = $assign;
-			$time_r['edit']["hours"] = '<input required type="text" name="hours" class="hours" value="">';
-			$time_r['edit']["notes"] = '<input required type="text" name="notes" class="notes" placeholder="notes" value="">';
-			$time_r['edit']["date"] = '<input required type="text" name="date" class="date smDtPicker" value="'. date('Y/m/d') .'">';
-			
-			$submit = sprintf('<a class="savetime" data-time="%s" title="Save these edits" href="?page=%s&action=%s&time=%s">Save</a>',$time->id,$_REQUEST['page'],'savetime',$time->id );
-			$cancel = sprintf('<a class="cancel" data-time="%s" title="Cancel editing" href="?page=%s&action=%s&time=%s">Cancel</a>',$time->id,$_REQUEST['page'],'delete',$time->id  );
-			$time_r['edit']["actions"] = "$submit | $cancel";
-			$time_r['edit']["class"] = 'editrow time-new';
+
+			// build the first row as a blank edit form
+			$time_r['edit'] = array(
+				"ID" => 'edit',
+				"cli" => '<select class="clisel">' . $cpt_sels['cli'] . '</select>',
+				"proj" => '<select class="projsel" disabled="disabled"><option>Project...</option></select>',
+				"task" => '<select class="tasksel" disabled="disabled"><option>Task...</option></select>', 
+				"task_id" 	=> 0,
+				"cli_id" 	=> 0,
+				"proj_id"	=> 0,
+				"user_id" 	=> 0,
+				"assign" => $assign,
+				"hours" => '<input required type="text" name="hours" class="hours" value="">',
+				"notes" => '<input required type="text" name="notes" class="notes" placeholder="notes" value="">',
+				"date" => '<input required type="text" name="date" class="date smDtPicker" value="'. date('Y/m/d') .'">',
+				"actions" => "$submit | $cancel",
+				"class" => 'editrow time-new'
+			);
 
 			foreach( $time_results as $time ){ // build array with id as key
 
-				// vars for specific later use
-				$time_r[$time->id]["ID"] = $time->id;
-				$time_r[$time->id]["task_id"] = $time->task_id;
-				$time_r[$time->id]["cli_id"] = $time->cli_id;
-				$time_r[$time->id]["proj_id"] = $time->proj_id;
-				$time_r[$time->id]["user_id"] = $time->user_id;
-				$time_r[$time->id]["class"] = ( $this->pm_users ? $this->pm_users[$time->user_id]['uslug'] : $time->user_id );
-				$time_r[$time->id]["start"] = $time->start_time;
-				$time_r[$time->id]["end"] = $time->end_time;
-				
-				// for table columns
-				$time_r[$time->id]["cli"] = $cli_ids[] = $time->cli_id;
-				$time_r[$time->id]["proj"] = $proj_ids[] = $time->proj_id;
-				$time_r[$time->id]["task"] = $task_ids[] = $time->task_id; 
-				$time_r[$time->id]["assign"] = ($this->pm_users ? $this->pm_users[$time->user_id]['uname'] : $time->user_id );
-				$time_r[$time->id]["hours"] = '<span class="start" data-start="' . strtotime( $time->start_time ) .'">';
-				$time_r[$time->id]["hours"] .= $time->hours;
-				$time_r[$time->id]["hours"] .= '</span>';
-				$time_r[$time->id]["notes"] = $time->description;
-				$time_r[$time->id]["date"] = date('Y/m/d', strtotime($time->start_time) );
+				$disp_hours = '<span class="start" data-start="' . strtotime( $time->start_time ) .'">';
+				$disp_hours .= $time->hours;
+				$disp_hours .= '</span>';
 				$edit = sprintf('<a class="edittime" data-time="%s" title="Edit this time entry" href="?page=%s&action=%s&time=%s">Edit</a>',$time->id,$_REQUEST['page'],'edit',$time->id );
 				$delete = sprintf('<a class="deltime" data-time="%s" title="Delete this time entry" href="?page=%s&action=%s&time=%s">Delete</a>',$time->id,$_REQUEST['page'],'delete',$time->id  );
-				$time_r[$time->id]["actions"] = "$edit | $delete";
+
+				$time_r[$time->id] = array(
+					// vars for specific later use
+					"ID" 		=> $time->id,
+					"task_id" 	=> $time->task_id,
+					"cli_id" 	=> $time->cli_id,
+					"proj_id"	=> $time->proj_id,
+					"user_id" 	=> $time->user_id,
+					"class" 	=> ( $this->pm_users ? $this->pm_users[$time->user_id]['uslug'] : $time->user_id ),
+					"start" 	=> $time->start_time,
+					"end" 		=> $time->end_time,
+					// for table columns
+					"cli" 	=> $time->cli_id,
+					"proj" 	=> $time->proj_id,
+					"task" 	=> $time->task_id, 
+					"assign" => ($this->pm_users ? $this->pm_users[$time->user_id]['uname'] : $time->user_id ),
+					"hours" => $disp_hours,
+					"notes" => $time->description,
+					"date" => date('Y/m/d', strtotime($time->start_time) ),
+					"actions" => "$edit | $delete"
+				);
+
+				$cli_ids[] = $time->cli_id;
+				$proj_ids[] = $time->proj_id;
+				$task_ids[] = $time->task_id; 
 
 			}
 		}

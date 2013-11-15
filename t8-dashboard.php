@@ -22,11 +22,6 @@ $year2day = $today['year'];
 	
 global $wpdb;
 	$wpdb->show_errors = true;
-	//Client list
-	$cli_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . 'pm_cli' ); // collect Client names and id
-	if($cli_results){ foreach($cli_results as $client){ // build array with id as key
-		$clients[$client->id]["name"] = $client->name;
-	}}
 	//Project Name list
 	$proj_name_results = $wpdb->get_results("SELECT id, name, end_date, proj_manager, misc FROM ".$wpdb->prefix . 'pm_projects' ); // collect Project names and id
 	if($proj_name_results){ foreach($proj_name_results as $proj){
@@ -126,10 +121,6 @@ global $wpdb;
 					}
 				}
 			}
-
-// echo '<pre>'; print_r($schedTasks); echo '</pre>';
-
-
 			if(!empty($schedTasks)) $schedTasks = array_reverse($schedTasks);
 
 			// Grab all this users punched time for today
@@ -143,12 +134,14 @@ global $wpdb;
 			$punched_tasks = array();
 			if($punched_results){
 				foreach($punched_results as $punched){ // build array with id as key
-					$t8_pm_punched[$punched->id]['task_id'] = $punched->task_id;
-					$t8_pm_punched[$punched->id]['proj_id'] = $punched->proj_id;
-					$t8_pm_punched[$punched->id]['cli_id'] = $punched->cli_id;
-					$t8_pm_punched[$punched->id]['start_time'] = $punched->start_time;
-					$t8_pm_punched[$punched->id]['end_time'] = $punched->end_time;
-					$t8_pm_punched[$punched->id]['hours'] = $punched->hours;
+					$t8_pm_punched[$punched->id] = array(
+						'task_id' 		=> $punched->task_id,
+						'proj_id' 		=> $punched->proj_id,
+						'cli_id' 		=> $punched->cli_id,
+						'start_time' 	=> $punched->start_time,
+						'end_time' 		=> $punched->end_time,
+						'hours' 		=> $punched->hours
+					);
 					$punched_tasks[] = $punched->id;
 					$punched_clis[] = $punched->cli_id;
 					$punched_projs[] = $punched->proj_id;
@@ -178,58 +171,37 @@ global $wpdb;
 				$task_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_tasks WHERE id IN(" . implode(',', $getTasksIdR).")" ); // collect tasks from schedule
 				if($task_results){
 					foreach($task_results as $task){ // build array with id as key
-						$t8_pm_day_tasks[$task->id]['task-title'] = $task->task_title;
-						$t8_pm_day_tasks[$task->id]['proj-id'] = ($task->proj_id != 0 ? $task->proj_id : '');
-						$t8_pm_day_tasks[$task->id]['proj-name'] = ($task->proj_id != 0 ? $projnames[$task->proj_id]['name'] : '');
-						$t8_pm_day_tasks[$task->id]['cli-id'] = ($task->cli_id != 0 ? $task->cli_id : '');
-						$t8_pm_day_tasks[$task->id]['cli-name'] = ($task->cli_id != 0 ? $clients[$task->cli_id]['name'] : '');
-						$t8_pm_day_tasks[$task->id]['assign'] = $task->assign;
-						$t8_pm_day_tasks[$task->id]['stage'] = $task->stage;
-						$t8_pm_day_tasks[$task->id]['status'] = $task->status;
-						$t8_pm_day_tasks[$task->id]['est-hours'] = $task->est_hours;
-						//$t8_pm_day_tasks[$task->id]['h-plan'] = $today_plan_R['task'][$task->id];
-						  $task_due = ($task->due != '' ? $task->due : $projnames[$task->proj_id]['end_date']);
-						$t8_pm_day_tasks[$task->id]['due'] = $task_due;
-						  $days_left = human_time_diff( $today[0], strtotime($task_due) ); // old: ceil( (strtotime($task_due) - $today[0])/(60*60*24) ); 
-						$t8_pm_day_tasks[$task->id]['days-left'] = $days_left;
-						$t8_pm_day_tasks[$task->id]['type'] = 'task';
+						$task_due = ($task->due != '' ? $task->due : $projnames[$task->proj_id]['end_date']);
+						$days_left = human_time_diff( $today[0], strtotime($task_due) ); // old: ceil( (strtotime($task_due) - $today[0])/(60*60*24) ); 
+						
+						$t8_pm_day_tasks[$task->id] = array(
+						    'title' 		=> $task->task_title,  
+						    'cli-id' 		=> ($task->cli_id != 0 ? $task->cli_id : ''),
+						    'proj-id' 		=> ($task->proj_id != 0 ? $task->proj_id : ''),
+						    'cli-name' 		=> ($task->cli_id != 0 ? $clients[$task->cli_id]['name'] : ''),  
+						    'proj-name' 	=> ($task->proj_id != 0 ? $projnames[$task->proj_id]['name'] : ''),  
+						    'assign' 		=> $task->assign,
+						    'stage' 		=> $task->stage,
+						    'status' 		=> $task->status,
+						    'due' 			=> $task_due,
+						    'hours' 		=> $task->est_hours,
+						    'days-left' 	=> $days_left 
+						);
 					}
 				}
 			}
-			// Grab all this users assignments that aren't already in planner
-			$not_in_assign = " AND id NOT IN (" . implode(',', $today_assign_array).") ";
-			$assign_results = $wpdb->get_results(
-				"SELECT * FROM ".$wpdb->prefix."pm_time 
-				WHERE user_id = ".$current_user->ID." 
-				AND start_time IS NULL 
-				". (!empty($today_assign_array) ? $not_in_assign : '') . " 
-				ORDER BY end_time LIMIT 20"
-			);
-			if($assign_results){
-				foreach($assign_results as $assign){ // build array with id as key
-					$t8_pm_p_tasks[$assign->id]['task-title'] = $assign->notes;
-					$t8_pm_p_tasks[$assign->id]['proj-id'] = ($assign->proj_id != 0 ? $assign->proj_id : '');
-					$t8_pm_p_tasks[$assign->id]['proj-name'] = ($assign->proj_id != 0 ? $projnames[$assign->proj_id]['name'] : '');
-					$t8_pm_p_tasks[$assign->id]['cli-id'] = ($assign->cli_id != 0 ? $assign->cli_id : '');
-					$t8_pm_p_tasks[$assign->id]['cli-name'] = ($assign->cli_id != 0 ? $clients[$assign->cli_id]['name'] : '');
-					$t8_pm_p_tasks[$assign->id]['assign'] = $assign->user_id;
-					$t8_pm_p_tasks[$assign->id]['stage'] = ($assign->task_id != 0 ? $assign->task_id : '');
-					$t8_pm_p_tasks[$assign->id]['type'] = 'assign';
-				}
-			}
-			if(!empty($t8_pm_p_tasks)) uasort($t8_pm_p_tasks, "t8_pm_custom_sort");
+
 			$task_status = array( "Current", "Submitted", "Completed");
 
-			
- $prevday = date('M-d-y', $showday[0] - (60*60*24));
- $nextday = date('M-d-y', $showday[0] + (60*60*24));
- if ( date('M-d-y', $showday[0] ) == date('M-d-y') ) {
- 	$showdayText = 'Today';
- }elseif( date('M-d-y', $showday[0] ) == date('M-d-y', strtotime('yesterday') ) ){
- 	$showdayText = 'Yesterday';
- }elseif( date('M-d-y', $showday[0] ) == date('M-d-y', strtotime('tomorrow') ) ){
- 	$showdayText = 'Tomorrow';
- } ?>
+			 $prevday = date('M-d-y', $showday[0] - (60*60*24));
+			 $nextday = date('M-d-y', $showday[0] + (60*60*24));
+			 if ( date('M-d-y', $showday[0] ) == date('M-d-y') ) {
+			 	$showdayText = 'Today';
+			 }elseif( date('M-d-y', $showday[0] ) == date('M-d-y', strtotime('yesterday') ) ){
+			 	$showdayText = 'Yesterday';
+			 }elseif( date('M-d-y', $showday[0] ) == date('M-d-y', strtotime('tomorrow') ) ){
+			 	$showdayText = 'Tomorrow';
+			 } ?>
         <?php 
 			// Get ready for Punchclock
 		$startTimer = 0;
@@ -241,115 +213,68 @@ global $wpdb;
 		} else {
 			$t8_pm_cpt_sels = t8_pm_cli_proj_task_selects( 1 );
 		} 
+		if( !isset($punchin['task']) ) {
+			$punchin['task'] = 0;
+		}
 		?>
 	<div id="dashboard-wrap" class="cf">
-        <?php if( ($showday[0] + 60 ) > $today[0] ) { ?>
+<?php 
+		if( ($showday[0] + 60 ) > $today[0] ) { 
+?>
 		<div class="dashboard all-tasks">
             <h3 class="th">Your Tasks</h3>
             <div class="container">
-            <div class="list sort" id="all-your-tasks">
-        <?php 
+	            <div class="list sort" id="all-your-tasks">
+<?php 
         	if( !empty( $schedTasks ) && !empty($t8_pm_day_tasks) ) {
                 foreach ($schedTasks as $tid) { // use dayplanner task array as key for pulling out queried tasks
-                       //echo 'DP'; print_r($dayplanner);
 					if(!isset($dayplanner[$year][$day]['task'])) $dayplanner[$year][$day]['task'] = array();
 					if( !in_array( $tid, $dayplanner[$year][$day]['task'] ) ){ 
-                            $task = $t8_pm_day_tasks[$tid];
-                ?>
-                <div class="dtask<?php echo ($task['type'] == 'assign' ? ' assign' : '');  echo ( $punchin['task'] == $tid ? ' punching' : ''); ?>" data-proj-id="<?php echo $task['proj-id']; ?>" data-stage="<?php echo $task['stage']; ?>" data-id="<?php echo $tid; ?>" data-cli="<?php echo $task['cli-id']; ?>" data-type="<?php echo $task['type']; ?>" data-hours="<?php echo $task['est-hours']; ?>">
-                    <h3><span class="cli-span"><?php echo (strlen($task['cli-name']) < 12 ? $task['cli-name'] : substr($task['cli-name'],0,12).'...'); ?></span>::<span class="proj-span"><?php echo (strlen($task['proj-name']) < 20 ? $task['proj-name'] : substr($task['proj-name'],0,20).'...'); ?></span>::
-                    <span class="rdts"><?php echo $task['est-hours']; ?> h est.</span></h3>
-                    <p>
-                        <span class="task-title"><?php echo $task['task-title']; ?></span>
-                        <span class="rdts"><?php echo $task['days-left']; ?></span>
-                    </p>
-                    <div class="x dact">X</div>
-                    <div class="send2pc dact">O</div>
-                    <div class="extras">
-                        <span class="mstone"><?php print_r( $projnames[$task['proj-id']]['mstones'][$task['stage']]['name'] ); ?></span>
-                        <div class="task-status rdts">
-                            <?php t8_pm_task_statuses( $tid = 0, $task ) ?>
-                       </div>
-                    </div>
-                </div>
-            <?php
+                        $taskR = array();
+                        $taskR[$tid] = $t8_pm_day_tasks[$tid];
+						t8_pm_dtask( $taskR, $punchin['task'] );	
                     }
                 }
-            } else { ?>
-				<div class="empty<?php echo (!empty($t8_pm_day_tasks) ? ' hidden' : ''); ?>">
-					<h3>Not much to do.</h3>
-				</div>
-
-			<?php
-            }
-        // and again for assignments
-            $i = 0;
-            if(!empty($t8_pm_p_tasks)){ foreach ($t8_pm_p_tasks as $id => $task) { ?>
-                <div class="dtask<?php echo ($task['type'] == 'assign' ? ' assign' : ''); ?>" data-proj-id="<?php echo $task['proj-id']; ?>" data-stage="<?php echo $task['stage']; ?>" data-id="<?php echo $id; ?>" data-cli="<?php echo $task['cli-id']; ?>" data-type="<?php echo $task['type']; ?>" data-hours="<?php echo $task['est-hours']; ?>">
-                        <h3><span class="cli-span"><?php echo (strlen($task['cli-name']) < 12 ? $task['cli-name'] : substr($task['cli-name'],0,12).'...'); ?></span>::<span class="proj-span"><?php echo (strlen($task['proj-name']) < 20 ? $task['proj-name'] : substr($task['proj-name'],0,20).'...'); ?></span>::</h3>
-                        <div class="rollover">
-                            <span class="x dact"></span>
-                        </div>
-                    <div class="lower">
-                            <span class="task-title"><?php echo $task['task-title']; ?></span>
-                            <span class="days-left"><?php echo $task['days-left']; ?></span>
-                        </div>
-                    <div class="extras">
-                        <span class="assign"><?php echo $task['assign']; ?></span>
-                        <span class="est-hours"><?php echo $task['est-hours']; ?> h est.</span>
-                    </div>
-                </div>
-            <?php
-            }}
-            ?>
-            </div>
+            } else { 
+?>
+					<div class="empty<?php echo (!empty($t8_pm_day_tasks) ? ' hidden' : ''); ?>">
+						<h3>Not much to do.</h3>
+					</div>
+<?php
+	        }
+?>
+	            </div>
             </div>
             <h3 class="th">Common Tasks</h3>
             <div class="container">
                 <div class="list sort" id="common-tasks">
-        <?php if( !empty( $commonTasks ) && !empty($t8_pm_day_tasks) ) {
+<?php 
+			if( !empty( $commonTasks ) && !empty($t8_pm_day_tasks) ) {
                 foreach ($commonTasks as $tid) { // use dayplanner task array as key for pulling out queried tasks
 					if(!isset($dayplanner[$year][$day]['task'])) $dayplanner[$year][$day]['task'] = array();
 					if( !in_array( $tid, $dayplanner[$year][$day]['task'] ) ){ 
-                        $task = $t8_pm_day_tasks[$tid];
-            ?>
-            <div class="dtask<?php echo ($task['type'] == 'assign' ? ' assign' : '');  echo ( $punchin['task'] == $tid ? ' punching' : ''); ?>" data-proj-id="<?php echo $task['proj-id']; ?>" data-stage="<?php echo $task['stage']; ?>" data-id="<?php echo $tid; ?>" data-cli="<?php echo $task['cli-id']; ?>" data-type="<?php echo $task['type']; ?>" data-hours="<?php echo $task['est-hours']; ?>">
-                <h3><span class="cli-span"><?php echo (strlen($task['cli-name']) < 12 ? $task['cli-name'] : substr($task['cli-name'],0,12).'...'); ?></span>::<span class="proj-span"><?php echo (strlen($task['proj-name']) < 20 ? $task['proj-name'] : substr($task['proj-name'],0,20).'...'); ?></span>::
-                <span class="rdts"><?php echo $task['est-hours']; ?> h est.</span></h3>
-                <p>
-                    <span class="task-title"><?php echo $task['task-title']; ?></span>
-                    <span class="rdts"><?php echo $task['days-left']; ?></span>
-                </p>
-                <div class="x dact">X</div>
-                <div class="send2pc dact">O</div>
-                <div class="extras">
-                    <span class="mstone"><?php print_r( $projnames[$task['proj-id']]['mstones'][$task['stage']]['name'] ); ?></span>
-                    <div class="task-status rdts">
-                        <?php t8_pm_task_statuses( $tid = 0, $task ) ?>
-                   </div>
-                </div>
-            </div>
-        <?php
+                        $taskR = array();
+                        $taskR[$tid] = $t8_pm_day_tasks[$tid];
+						t8_pm_dtask( $taskR, $punchin['task'] );
+					}
                 }
-            }
-        } else { ?>
+       		} else { 
+?>
 				<div class="empty<?php echo (!empty($t8_pm_day_tasks) ? ' hidden' : ''); ?>">
 					<h3>Not a lot going on</h3>
 				</div>
-
-			<?php
-            }
+<?php
+        	}
 ?> 
                </div>
             </div>
         </div>
-        <?php } // end if( ($showday[0] + 60 ) > $today[0] ) 
-        ?>
-
-
+<?php 
+		} // end if( ($showday[0] + 60 ) > $today[0] ) 
+?>
         <div class="today-wrap">
-        	<a class="prevday" href="<?php echo admin_url( 'admin.php?page=t8-teammate/t8-teammate.php' ); echo '&d='.$prevday; ?>" title="Previous Day">previous day</a>
-            <a class="nextday" href="<?php echo admin_url( 'admin.php?page=t8-teammate/t8-teammate.php' ); echo '&d='.$nextday; ?>" title="Previous Day">next day</a>
+        	<a class="prevday" href="<?php echo add_query_arg('d',$prevday); ?>" title="Previous Day">previous day</a>
+        	<a class="nextday" href="<?php echo add_query_arg('d',$nextday); ?>" title="Next Day">next day</a>
             <form action="<?php echo admin_url( 'admin.php' ); ?>" method="get" >
 	        	<h2 class="th"><?php echo ( isset( $showdayText ) ? $showdayText : ''); ?> 
             	<input type="text" class="datepicker"  name="d" id="d" value="<?php echo date('D, M d, Y', $showday[0]); ?>" />
@@ -419,43 +344,37 @@ global $wpdb;
                     </div>
                 </div>
                 <div class="dashboard today-tasks t8pm-dsh-col" data-day="<?php echo $day; ?>" data-year="<?php echo $year; ?>">
-                    <?php if( ($showday[0] + 60 ) > $today[0] ) { ?>
+<?php 
+		if( ($showday[0] + 60 ) > $today[0] ) { 
+?>
                     <div class="leftcol">
                         <h3 class="th">Planner <a class="add orphan" href="">+</a></h3>
                         <div class="list sort" id="planner">
                             <div class="empty<?php echo (!empty($t8_pm_day_tasks) ? ' hidden' : ''); ?>">
                                 <h3>Drag Tasks Here to Start</h3>
                             </div>
-                        <?php if( !empty( $dayplanner[$year][$day]['task']) && !empty($t8_pm_day_tasks) ) {
-                                foreach ($dayplanner[$year][$day]['task'] as $tid) { // use dayplanner task array as key for pulling out queried tasks
-                                    $task = $t8_pm_day_tasks[$tid];
-                            ?>
-                                <div class="dtask<?php echo ($task['type'] == 'assign' ? ' assign' : ''); if(is_array($punchin)) echo ( $punchin['task'] == $tid ? ' punching' : ''); ?>" data-proj-id="<?php echo $task['proj-id']; ?>" data-stage="<?php echo $task['stage']; ?>" data-id="<?php echo $tid; ?>" data-cli="<?php echo $task['cli-id']; ?>" data-type="<?php echo $task['type']; ?>" data-hours="<?php echo $task['est-hours']; ?>">
-                                    <h3><span class="cli-span"><?php echo (strlen($task['cli-name']) < 12 ? $task['cli-name'] : substr($task['cli-name'],0,12).'...'); ?></span>::<span class="proj-span"><?php echo (strlen($task['proj-name']) < 20 ? $task['proj-name'] : substr($task['proj-name'],0,20).'...'); ?></span>::
-                                    <span class="rdts"><?php echo $task['est-hours']; ?> h est.</span></h3>
-                                    <p><span class="task-title"><?php echo $task['task-title']; ?></span><span class="rdts"><?php echo $task['days-left']; ?></span></p>
-                                    <div class="x dact">X</div>
-                                    <div class="send2pc dact">O</div>
-                                    <div class="extras extra-planner">
-                                        <span class="mstone"><?php echo $projnames[$task['proj-id']]['mstones'][$task['stage']]['name']; ?></span>
-                                        <div class="task-status rdts">
-                                            <?php t8_pm_task_statuses( $tid = 0, $task ) ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php } ?>
-                        <?php } ?>
+							<?php
+	 		if( !empty( $dayplanner[$year][$day]['task']) && !empty($t8_pm_day_tasks) ) {
+	            foreach ($dayplanner[$year][$day]['task'] as $tid) { // use dayplanner task array as key for pulling out queried tasks
+	                $taskR = array();
+	                $taskR[$tid] = $t8_pm_day_tasks[$tid];
+					t8_pm_dtask( $taskR, $punchin['task'] );
+	            }
+	        }
+							?>
                         </div>
                     </div>
-                     <div class="rightcol">
+                    <div class="rightcol">
                         <div class="flyoutwrap"></div>
                     </div>
-                    <?php } // end if( ($showday[0] + 60 ) > $today[0] ) ?>
+<?php 
+		} // end if( ($showday[0] + 60 ) > $today[0] ) ?>
                 </div>
             </div>
             <div id="punched-tasks" class="dashboard">
-                 <h3 class="th">Punched Time</h3>
-                <?php if( !empty( $punched_tasks) && !empty($t8_pm_day_tasks) ) {
+                <h3 class="th">Punched Time</h3>
+				<?php 
+		if( !empty( $punched_tasks) && !empty($t8_pm_day_tasks) ) {
                         foreach ($punched_tasks as $tid) { // use dayplanner task array as key for pulling out queried tasks
                             $task = $t8_pm_punched[$tid];
                             $startNtime = date("g:i a", $task['start_time']);
@@ -470,14 +389,17 @@ global $wpdb;
                                     <div class="send2pc dact">O</div>
                                 </div>';
                         } 
-                    }else{ ?>
+                    }else{ 
+				?>
                 <div class="empty">
                     <h3>No Punched Time on this day, yet.</h3>
                 </div>
-                <?php } ?>
+<?php 
+					} 
+?>
             </div>
         </div>
-</div>
+	</div>
 </div>
 <?php
 //eof
