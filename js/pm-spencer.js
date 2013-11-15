@@ -180,7 +180,7 @@ jQuery(document).ready(function($){
 		var chartLegend	= tableData.chartLegend();
 		var legendList	= $('<ul class="legend"></ul>');
 		$.each(chartLegend, function(i) {			
-			var listItem = $('<li><span class="icon ' + yClass[i] + '">' + this + '</span></li>')
+			var listItem = $('<li><span class="icon ' + yClass[i] + '"></div></span>' + this + '</li>')
 				.appendTo(legendList);
 		});
 		legendList.appendTo(figureContainer);
@@ -416,7 +416,7 @@ jQuery(document).ready(function($){
 		var chartLegend	= tableData.chartLegend();
 		var legendList	= $('<ul class="legend"></ul>');
 		$.each(chartLegend, function(i) {			
-			var listItem = $('<li><span class="icon ' + yClass[i] + '">' + this + '</span></li>')
+			var listItem = $('<li><span class="icon ' + yClass[i] + '"></div></span>' + this + '</li>')
 				.appendTo(legendList);
 		});
 		legendList.appendTo(figureContainer);
@@ -798,78 +798,68 @@ if ($("#tasks").length > 0){
 		var link = $(this);
 		var timerow = link.closest("tr");
 		e.preventDefault();
-		var validcheck = 1;
-		timerow.find('input[required]').each( function(){
-			if( !$(this).val() ) validcheck = 0;
-		});
-		if(validcheck){
-			var time_id = timerow.data('time');
-				cli 	= timerow.find('select.clisel').val(),
-				proj = timerow.find('select.projsel').val(),
-				task = timerow.find('select.tasksel').val(),
-				assign 	= timerow.find('select.assign').val(),
-				cliname 	= timerow.find('select.clisel option:selected').html(),
-				projname = timerow.find('select.projsel option:selected').html(),
-				taskname = timerow.find('select.tasksel option:selected').html(),
-				assignname 	= timerow.find('select.assign option:selected').html(),
-				notes 	= timerow.find('input.notes').val(),
-				date 	= timerow.find('input.date').val(),
-				hours 	= timerow.find('.hours input').val(),
-				start 	= timerow.find('.hours input').data('start'), 
-				nonce = $('input#t8_pm_nonce').val();
-			var data = {
-				action: 't8_pm_update_time_entry',
-				time_id: time_id,
-				cli: cli,
-				proj: proj,
-				task: task,
-				assign : assign,
-				notes : notes,
-				date : date,
-				hours : hours,
-				start : start,
-				nonce : nonce
-			};
-			$.post(ajaxurl, data, function(response) {
-				if(response.tid){
-					var altclass = 'alternate',
-					assignclass = assignname.toLowerCase();
-					if( timerow.next('tr').hasClass('alternate') ) altclass = '';
-					var rowclone = 	timerow.clone();
-					rowclone.removeClass('time-new editrow').addClass( assignclass+' '+altclass ).attr('id', 'time-'+response.tid).data('time', response.tid)
-						.find(".cli").data('cli', cli ).html(cliname).end()
-						.find(".proj").data('proj', proj ).html(projname).end()
-						.find(".task").data('task', task ).html(taskname).end()
-						.find(".assign").data('assign', assign ).html(assignname).end()
-						.find(".hours").html('<span class="start" data-start="'+ start +'">'+ hours +'</span>').end()
-						// .find(".hours span.end").data('start'), // !!! need to change start time if date changed and change endtime if hours change, or don't show times at all?
-						.find(".notes").html(notes).end()
-						.find(".date").html(date).end()
-						.find(".savetime").removeClass('savetime').addClass('edittime').data('time', response.tid).attr('title', 'Edit this time entry').html('Edit').end()
-						.find(".cancel").removeClass('cancel').addClass('deltime').attr('title', 'Delete this time entry').html('Delete').end()
-					.insertAfter(timerow);
-					if($('div.wrap.t8-pm .updated').length == 0 ) $('div.wrap.t8-pm').prepend('<div class="updated">' + response.message + '</div>');
-					else $('div.wrap.t8-pm .updated').html(response.message);
-				}else if(response.message){
-					timerow.prev('tr')
-						.find(".cli").data('cli', cli ).html(cliname).end()
-						.find(".proj").data('proj', proj ).html(projname).end()
-						.find(".task").data('task', task ).html(taskname).end()
-						.find(".assign").data('assign', assign ).html(assignname).end()
-						.find(".hours span").html(hours).end()
-						// .find(".hours span.end").data('start'), // !!! need to change start time if date changed and change endtime if hours change, or don't show times at all?
-						.find(".notes").html(notes).end()
-						.find(".date").html(date).end()
-						.show();
-					timerow.remove();
-					if($('div.wrap.t8-pm .updated').length == 0 ) $('div.wrap.t8-pm').prepend('<div class="updated">' + response.message + '</div>');
-					else $('div.wrap.t8-pm .updated').html(response.message);
-				}else{
-					if($('div.wrap.t8-pm .warning').length == 0 ) $('div.wrap.t8-pm').prepend('<div class="warning">' + response.warning + '</div>');
-					else $('div.wrap.t8-pm .warning').html(response.warning);
-				}
-			}, "json");
-		}
+		var time_id = timerow.data('time');
+			cli 	= timerow.find('select.clisel').val(),
+			proj = timerow.find('select.projsel').val(),
+			task = timerow.find('select.tasksel').val(),
+			assign 	= timerow.find('select.assign').val(),
+			cliname 	= timerow.find('select.clisel option:selected').html(),
+			projname = timerow.find('select.projsel option:selected').html(),
+			taskname = timerow.find('select.tasksel option:selected').html(),
+			assignname 	= timerow.find('select.assign option:selected').html(),
+			notes 	= timerow.find('input.notes').val(),
+			date 	= timerow.find('input.date').val(),
+			hours 	= timerow.find('.hours input').val(),
+			start 	= timerow.find('.hours input').data('start'), 
+			nonce = $('input#t8_pm_nonce').val();
+		var data = {
+			action: 't8_pm_update_time_entry',
+			time_id: time_id,
+			cli: cli,
+			proj: proj,
+			task: task,
+			assign : assign,
+			notes : notes,
+			date : date,
+			hours : hours,
+			start : start,
+			nonce : nonce
+		};
+		$.post(ajaxurl, data, function(response) {
+			if(response.tid){
+				var altclass = 'alternate',
+				assignclass = assignname.toLowerCase();
+				if( timerow.next('tr').hasClass('alternate') ) altclass = '';
+				var rowclone = 	timerow.clone();
+				rowclone.removeClass('time-new editrow').addClass( assignclass+' '+altclass ).attr('id', 'time-'+response.tid)
+					.find(".cli").data('cli', cli ).html(cliname).end()
+					.find(".proj").data('proj', proj ).html(projname).end()
+					.find(".task").data('task', task ).html(taskname).end()
+					.find(".assign").data('assign', assign ).html(assignname).end()
+					.find(".hours").html('<span class="start" data-start="'+ start +'">'+ hours +'</span>').end()
+					// .find(".hours span.end").data('start'), // !!! need to change start time if date changed and change endtime if hours change, or don't show times at all?
+					.find(".notes").html(notes).end()
+					.find(".date").html(date).end()
+				.insertAfter(timerow);
+				$('div.wrap.t8-pm').prepend('<div class="updated">' + response.message + '</div>');
+			}else if(response.message){
+				timerow.prev('tr')
+					.find(".cli").data('cli', cli ).html(cliname).end()
+					.find(".proj").data('proj', proj ).html(projname).end()
+					.find(".task").data('task', task ).html(taskname).end()
+					.find(".assign").data('assign', assign ).html(assignname).end()
+					.find(".hours span").html(hours).end()
+					// .find(".hours span.end").data('start'), // !!! need to change start time if date changed and change endtime if hours change, or don't show times at all?
+					.find(".notes").html(notes).end()
+					.find(".date").html(date).end()
+					.show();
+				timerow.remove();
+				$('div.wrap.t8-pm').prepend('<div class="updated">' + response.message + '</div>');
+			}else{
+				$('div.wrap.t8-pm').prepend('<div class="warning">' + response.warning + '</div>');
+			}
+		}, "json");
+			
 	});
 	$('div.t8-pm').on("click", "tr.editrow td a.cancel", function(e) {
 		e.preventDefault();
@@ -877,33 +867,7 @@ if ($("#tasks").length > 0){
 
 		
 	});
-	$('div.t8-pm').on("click", "td a.deltime", function(e) {
-		var link = $(this);
-		var timerow = link.closest("tr");
-		e.preventDefault();
-		var time_id = timerow.data('time');
-		console.log(time_id);
-			nonce = $('input#t8_pm_nonce').val();
-		var data = {
-			action: 't8_pm_del_time_entry',
-			time_id: time_id,
-			nonce : nonce
-		};
-		$.post(ajaxurl, data, function(response) {
-			if(response.message){
-				timerow.remove();
-				if($('div.wrap.t8-pm .updated').length == 0 ) $('div.wrap.t8-pm').prepend('<div class="updated">' + response.message + '</div>');
-				else $('div.wrap.t8-pm .updated').html(response.message);
-			}else{
-				if($('div.wrap.t8-pm .warning').length == 0 ) $('div.wrap.t8-pm').prepend('<div class="warning">' + response.warning + '</div>');
-				else $('div.wrap.t8-pm .warning').html(response.warning);
-			}
-		}, "json");
-	});
-	$('div.t8-pm').on("click", "tr.editrow td a.cancel", function(e) {
-		e.preventDefault();
-		$(this).closest("tr").prev().show().end().remove();		
-	});
+
 
 	// Task Completion Checkboxes
 	$('.dashboard, #tasks').on("change", "input.t8-pm-task-status", function(e){
