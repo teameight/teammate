@@ -145,6 +145,9 @@ td.num input {
 .t8-pm .editrow td {
 	font-size: .9em;
 }
+.t8-pm .editrow.time-new .cancel {
+	display:none;
+}
 .t8-pm .editrow td select,
 .t8-pm .editrow td input {
 	width: 98%;
@@ -321,12 +324,12 @@ width: 100%;
 	position: relative;
 	border-left: 1px dotted #ddd;
 }
-.bar-group.nowtime, .bar-group.yester {
+.bar-group.today, .bar-group.yester {
 	border-left: 1px solid #f64;
-	border-top:15px solid #fff;
+	border-top:15px solid #eee;
 	top:-15px;
 }
-.bar-group.nowtime:after, .bar-group.nowtime:before  {
+.bar-group.today:after, .bar-group.today:before  {
 	position: absolute;
 	color: #f53;
 	top: 0px;
@@ -336,11 +339,11 @@ width: 100%;
 	line-height: 1;
 	top:-12px;
 }
-.bar-group.nowtime:after  {
+.bar-group.today:after  {
 	content: 'scheduled';
 	left: 0%;
 }
-.bar-group.nowtime:before  {
+.bar-group.today:before  {
 	content: 'punched';
 	right: 100%;
 }
@@ -441,7 +444,7 @@ width: 100%;
 	margin-top: 5px;
 	opacity: 1;
 }
-.bar div:hover { background:#aaa; }
+.bar-group .bar div:hover { background:#444; }
 .t8-pm-bar {
     background-color: #888;
     border-right-color: #9999DD;
