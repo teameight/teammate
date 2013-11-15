@@ -190,7 +190,7 @@ global $wpdb;
 						//$t8_pm_day_tasks[$task->id]['h-plan'] = $today_plan_R['task'][$task->id];
 						  $task_due = ($task->due != '' ? $task->due : $projnames[$task->proj_id]['end_date']);
 						$t8_pm_day_tasks[$task->id]['due'] = $task_due;
-						  $days_left = ceil( (strtotime($task_due) - $today[0])/(60*60*24) );
+						  $days_left = human_time_diff( $today[0], strtotime($task_due) ); // old: ceil( (strtotime($task_due) - $today[0])/(60*60*24) ); 
 						$t8_pm_day_tasks[$task->id]['days-left'] = $days_left;
 						$t8_pm_day_tasks[$task->id]['type'] = 'task';
 					}
@@ -261,7 +261,7 @@ global $wpdb;
                     <span class="rdts"><?php echo $task['est-hours']; ?> h est.</span></h3>
                     <p>
                         <span class="task-title"><?php echo $task['task-title']; ?></span>
-                        <span class="rdts"><?php echo $task['days-left']; ?> days</span>
+                        <span class="rdts"><?php echo $task['days-left']; ?></span>
                     </p>
                     <div class="x dact">X</div>
                     <div class="send2pc dact">O</div>
@@ -292,7 +292,7 @@ global $wpdb;
                         </div>
                     <div class="lower">
                             <span class="task-title"><?php echo $task['task-title']; ?></span>
-                            <span class="days-left"><?php echo $task['days-left']; ?> days</span>
+                            <span class="days-left"><?php echo $task['days-left']; ?></span>
                         </div>
                     <div class="extras">
                         <span class="assign"><?php echo $task['assign']; ?></span>
@@ -318,36 +318,14 @@ global $wpdb;
                 <span class="rdts"><?php echo $task['est-hours']; ?> h est.</span></h3>
                 <p>
                     <span class="task-title"><?php echo $task['task-title']; ?></span>
-                    <span class="rdts"><?php echo $task['days-left']; ?> days</span>
+                    <span class="rdts"><?php echo $task['days-left']; ?></span>
                 </p>
                 <div class="x dact">X</div>
                 <div class="send2pc dact">O</div>
                 <div class="extras">
                     <span class="mstone"><?php print_r( $projnames[$task['proj-id']]['mstones'][$task['stage']]['name'] ); ?></span>
                     <div class="task-status rdts">
-                        <?php 
-                        $t8_pm_inreview_cbox = '<span>In Review</span> <input type="checkbox" name="review[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
-                        $t8_pm_submit_cbox = '<span>Submit for Review</span> <input type="checkbox" name="review[]" class="t8-pm-task-status" value="'.$tid.'" />';
-                        $t8_pm_complete_cbox = ' <input type="checkbox" name="complete[]" class="t8-pm-task-status" value="'.$tid.'" />';
-                        $t8_pm_uncomplete_cbox = ' <input type="checkbox" name="complete[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
-                        if( !isset($task['proj-man']) ) $task['proj-man'] = '';
-                        if( $task['stage'] == '0' ) { 
-                            echo 'Ongoing';	
-                        }elseif( $task['status'] == '0' ) { 
-                            if( $task['proj-man'] == $current_user->ID ) { 
-                                echo '<span>Mark as Complete</span>' . $t8_pm_complete_cbox;
-                            }elseif( $task['assign']  == $current_user->ID ) { 
-                                echo $t8_pm_submit_cbox;
-                            }else{
-                                echo 'Incomplete';	
-                            } 
-                        }elseif( $task['status'] == '1' ) { 
-                            echo ( $task['proj-man'] == $current_user->ID ? '<span>Approve as Complete</span>' . $t8_pm_complete_cbox : $t8_pm_inreview_cbox );
-                        }elseif( $task['status'] == '2' ) { 
-                            if( $task['proj-man'] == $current_user->ID || $task['assign']  == $current_user->ID ) echo $t8_pm_uncomplete_cbox;
-                            echo '<span>Completed</span>';
-                        }else{ echo 'status: ' . $task['status']; }
-                    ?>
+                        <?php t8_pm_task_statuses( $tid = 0, $task ) ?>
                    </div>
                 </div>
             </div>
@@ -455,41 +433,13 @@ global $wpdb;
                                 <div class="dtask<?php echo ($task['type'] == 'assign' ? ' assign' : ''); if(is_array($punchin)) echo ( $punchin['task'] == $tid ? ' punching' : ''); ?>" data-proj-id="<?php echo $task['proj-id']; ?>" data-stage="<?php echo $task['stage']; ?>" data-id="<?php echo $tid; ?>" data-cli="<?php echo $task['cli-id']; ?>" data-type="<?php echo $task['type']; ?>" data-hours="<?php echo $task['est-hours']; ?>">
                                     <h3><span class="cli-span"><?php echo (strlen($task['cli-name']) < 12 ? $task['cli-name'] : substr($task['cli-name'],0,12).'...'); ?></span>::<span class="proj-span"><?php echo (strlen($task['proj-name']) < 20 ? $task['proj-name'] : substr($task['proj-name'],0,20).'...'); ?></span>::
                                     <span class="rdts"><?php echo $task['est-hours']; ?> h est.</span></h3>
-                                    <p><span class="task-title"><?php echo $task['task-title']; ?></span><span class="rdts"><?php echo $task['days-left']; ?> days</span></p>
+                                    <p><span class="task-title"><?php echo $task['task-title']; ?></span><span class="rdts"><?php echo $task['days-left']; ?></span></p>
                                     <div class="x dact">X</div>
                                     <div class="send2pc dact">O</div>
                                     <div class="extras extra-planner">
                                         <span class="mstone"><?php echo $projnames[$task['proj-id']]['mstones'][$task['stage']]['name']; ?></span>
                                         <div class="task-status rdts">
-                                            <?php 
-                                            $t8_pm_inreview_cbox = '<span>In Review</span> <input type="checkbox" name="review[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
-                                            $t8_pm_submit_cbox = '<span>Submit for Review</span> <input type="checkbox" name="review[]" class="t8-pm-task-status" value="'.$tid.'" />';
-                                            $t8_pm_complete_cbox = ' <input type="checkbox" name="complete[]" class="t8-pm-task-status" value="'.$tid.'" />';
-                                            $t8_pm_uncomplete_cbox = ' <input type="checkbox" name="complete[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
-                                            if( !isset($projnames[$task->proj_id]['proj_manager'])) $projnames[$task->proj_id]['proj_manager'] = '';
-                                            if( $task['stage'] == '0' ) { 
-                                                echo 'Ongoing';	
-                                            }elseif( $task['status'] == '0' ) { 
-                                                if( $projnames[$task->proj_id]['proj_manager'] == $current_user->ID ) { 
-                                                    echo '<span>Mark as Complete</span>' . $t8_pm_complete_cbox;
-                                                }elseif( $task['assign']  == $current_user->ID ) { 
-                                                    echo $t8_pm_submit_cbox;
-                                                }else{
-                                                    echo 'Incomplete';	
-                                                } 
-                                            }elseif( $task['status'] == '1' ) { 
-                                                if( $task['proj-man'] == $current_user->ID ) { 
-                                                    echo '<span>Approve as Complete</span>' . $t8_pm_complete_cbox;
-                                                }else{
-                                                    echo $t8_pm_inreview_cbox;	
-                                                }
-                                            }elseif( $task['status'] == '2' ) { 
-                                                if( $task['proj-man'] == $current_user->ID || $task['assign']  == $current_user->ID ) { 
-                                                    echo $t8_pm_uncomplete_cbox;
-                                                }
-                                                echo '<span>Completed</span>';
-                                            }else{ echo 'status: ' . $task['status']; }
-                                        ?>
+                                            <?php t8_pm_task_statuses( $tid = 0, $task ) ?>
                                         </div>
                                     </div>
                                 </div>
