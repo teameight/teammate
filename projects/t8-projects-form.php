@@ -91,7 +91,7 @@
         <input type="hidden" name="t8_pm_proj_id" value="<?php echo $t8_pm_proj_id; ?>" />
         <p class="submit clear">
             <input type="submit" class="button-primary" value="<?php if($_GET['action'] == "edit") echo 'Save Changes'; else echo 'Create Project'; ?>" />
-            &nbsp;&nbsp;&nbsp;<a href="<?php echo admin_url( 'admin.php?page=t8-teammate/t8-teammate.php_projects' ); ?>">Cancel</a>
+            &nbsp;&nbsp;&nbsp;<a href="<?php echo remove_query_arg( array( 'action', 'project' ) ); ?>">Cancel</a>
         </p>
     </form>
 </div>

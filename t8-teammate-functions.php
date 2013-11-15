@@ -361,8 +361,9 @@ if(!empty( $mArray['tasks'] ) ) {
  * Generates a display table of tasks grouped by milestone.
  *
  * @param  array $mstones array of milestone and task data. 
- *    $mstones = array(
- *      $mid => array(
+ * @param array $args {
+ *     An array of arguments. Optional.
+ *		$mid => array(
  *          'name' => '',
  *          'deadline' => '',
  *          'hours' => '',
@@ -374,8 +375,8 @@ if(!empty( $mArray['tasks'] ) ) {
  *                  'status' => '',
  *              )
  *          )  
- *      )
- *    );
+ *      ) *
+ * }
  *
  */
 function t8_pm_mstone_view_table( $mstone = array() ){
@@ -439,6 +440,57 @@ if(!empty( $mArray['tasks'] ) ) {
 } // end func t8_pm_mstone_form_table
 
 
+/**
+ * Create a dashboard task.
+ *
+ * Generates task markup for the dasboard.
+ *
+ * @param  array $taskR array of task data. 
+ * @param array $args {
+ *     An array of arguments. Optional.
+ *		$tid => array(
+ *          'cli-id' => '',
+ *          'proj-id' => '',
+ *          'stage' => '',
+ *          'cli-name' => '',  
+ *          'proj-name' => '',  
+ *          'title' => '',  
+ *          'days-left' => '',  
+ *          'mstone-name' => '',  
+ *          'hours' => ''
+ *      )
+ * }
+ * @param  string $highlight_task id of task currently being tracked. 
+ *
+ */
+function t8_pm_dtask( $taskR = array(), $highlight_task = 0 ){
+	global $pm_users;
+    //should validate array here or is it already done !!! ?
+    if(!empty($taskR)){
+        foreach ($taskR as $tid => $task) {
+?>
+<div class="dtask<?php echo ( $highlight_task == $tid ? ' punching' : ''); ?>" data-proj-id="<?php echo $task['proj-id']; ?>" data-stage="<?php echo $task['stage']; ?>" data-id="<?php echo $tid; ?>" data-cli="<?php echo $task['cli-id']; ?>" data-hours="<?php echo $task['hours']; ?>">
+    <h3><span class="cli-span"><?php echo $task['cli-name']; ?></span>::<span class="proj-span"><?php truncate_string($task['proj-name']); ?></span>::
+    <span class="rdts"><?php echo $task['hours']; ?> h est.</span></h3>
+    <p>
+        <span class="task-title"><?php echo $task['title']; ?></span>
+        <span class="rdts"><?php echo $task['days-left']; ?></span>
+    </p>
+    <div class="x dact">X</div>
+    <div class="send2pc dact">O</div>
+    <div class="extras">
+        <span>-</span>
+        <div class="task-status rdts"><?php t8_pm_task_statuses( $tid = 0, $task ) ?></div>
+    </div>
+</div>
+<?php
+		}
+	}
+}
+
+function truncate_string($string, $length = 20){
+	echo (strlen($string) < $length ? $string : substr($string,0,$length).'...');
+}
 function t8_pm_custom_sort($a, $b) {
 	return $a["stage"] > $b["stage"];
 }
@@ -714,7 +766,7 @@ function t8_pm_schedule( $proj_id, $t8_pm_proj_start = 0, $t8_pm_proj_end = 0 ) 
 								if( !isset($pm_schedule[$date][$assign]["hours"]) ) $pm_schedule[$date][$assign]["hours"] = 0;
 								$pm_schedule[$date][$assign]["hours"] += $hours["perday"]; // build the schedule
 								$pm_schedule[$date][$assign]["task_times"][$task_id] = round(1000*$hours["perday"])/1000; // build the schedule
-								$hours[$stask_id]["remainder"] -= $hours["perday"];
+								$hours["remainder"] -= $hours["perday"];
 								$dly_cpcty["$date"] -= $hours["perday"];
 							}
 						}else{ // no room for this full task remainder, schedule the portion
@@ -802,6 +854,7 @@ function t8_pm_cap_calendar( $pm_users ) {
 			$punched_hourstot += $punched->hours;
 			if( !isset($punchedtasks[$punched->task_id]['hours']) ) $punchedtasks[$punched->task_id]['hours'] = 0;
 			$punchedtasks[$punched->task_id]['hours'] += $punched->hours;
+			if( !isset($dly_cpcty[$date]) ) $dly_cpcty[$date] = 0;
 			$dly_cpcty[$date] += $punched->hours;
 			$proj_ids[] = $punched->proj_id;
 			$i++;
@@ -974,7 +1027,7 @@ function t8_pm_cli_proj_task_selects( $getcli = 0, $cli = 0, $proj = 0, $task = 
 			foreach($results as $result){
 				$sel = '';
 				if( $proj ) $sel = ( $proj == $result->id ? ' selected="selected"' : '' );
-				$addprojlist .= '<option'.$sel.' value="'.$result->id.'">'.$result->name.'X</option>';
+				$addprojlist .= '<option'.$sel.' value="'.$result->id.'">'.$result->name.'</option>';
 			}
 		}
 		$return['proj'] = $addprojlist;
@@ -1240,7 +1293,7 @@ function t8_pm_projtotrash() {
 		//$punchin = get_user_meta($userdata->ID, 'dayplanner', true);
 		$proj_id = intval( $_POST['proj_id'] );
 		
-		$resultsproj = $wpdb->update( $wpdb->prefix . 'pm_projects', array( 'status' => 4 ), array('id' => $proj_id) );
+		$resultsproj = $wpdb->update( $wpdb->prefix . 'pm_projects', array( 'status' => 3 ), array('id' => $proj_id) );
 		
 		if( $resultsproj ) {
 			$sched_results = $wpdb->get_results("DELETE FROM ".$wpdb->prefix . "pm_schedule WHERE proj_id = ".$proj_id  ); 
