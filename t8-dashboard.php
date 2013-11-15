@@ -206,7 +206,7 @@ global $wpdb;
 			// Get ready for Punchclock
 		$startTimer = 0;
 		$punchin = get_user_meta( $current_user->ID, "punchin", true);
-		if(!empty($punchin ) ){
+		if(!empty( $punchin ) ){
 			$startTimer = $punchin['start_time'];
 			$t8_pm_cpt_sels = t8_pm_cli_proj_task_selects( 1, $punchin['cli'], $punchin['proj'], $punchin['task'] );
 			//$punchin = $t8_pm_cpt_sels['punchin'];
@@ -214,6 +214,7 @@ global $wpdb;
 			$t8_pm_cpt_sels = t8_pm_cli_proj_task_selects( 1 );
 		} 
 		if( !isset($punchin['task']) ) {
+			$punchin = array();
 			$punchin['task'] = 0;
 		}
 		?>
@@ -377,13 +378,13 @@ global $wpdb;
 		if( !empty( $punched_tasks) && !empty($t8_pm_day_tasks) ) {
                         foreach ($punched_tasks as $tid) { // use dayplanner task array as key for pulling out queried tasks
                             $task = $t8_pm_punched[$tid];
-                            $startNtime = date("g:i a", $task['start_time']);
-                            $endNtime = date("g:i a", $task['end_time']);
+                            $startNtime = date("g:i a", strtotime( $task['start_time'] ) );
+                            $endNtime = date("g:i a", strtotime( $task['end_time'] ) );
                             echo '<div class="dtask" data-proj-id="'. $task['proj_id'] .'" data-id="'. $task['task_id'] .'" data-cli="'. $task['cli_id'] .'" data-hours="'. $task['hours'] .'">
                                     <h3><span class="cli-span">'. $clients[$task['cli_id']]['name'] .'</span>::<span class="proj-span">'. $projnames[$task['proj_id']]['name'] .'</span>::
                                     <span class="rdts">'. $task['hours'] .' hrs</span></h3>
                                     <p>
-                                        <span class="task-title">'. $t8_pm_day_tasks[$task['task_id']]['task-title'] .'</span>
+                                        <span class="task-title">'. $t8_pm_day_tasks[$tid]['title'] .'</span>
                                         <span class="rdts">'. $startNtime .' - '. $endNtime .'</span>
                                     </p>
                                     <div class="send2pc dact">O</div>

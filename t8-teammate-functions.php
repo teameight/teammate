@@ -212,6 +212,7 @@ function t8_pm_task_statuses($tid = 0, $task = array() ) {
 	$submit_cbox = '<span>Submit for Review</span> <input type="checkbox" name="review[]" class="t8-pm-task-status" value="'.$tid.'" />';
 	$complete_cbox = ' <input type="checkbox" name="complete[]" class="t8-pm-task-status" value="'.$tid.'" />';
 	$uncomplete_cbox = ' <input type="checkbox" name="complete[]" checked class="t8-pm-task-status" value="'.$tid.'" />';
+	if( !isset( $task['stage'] ) ){ $task['stage'] = 0; }
 	if( $task['stage'] == '0' ) { 
 	    echo 'Ongoing';	
 	}elseif( $task['status'] == '0' ) { 
@@ -1131,8 +1132,10 @@ function t8_pm_getWorkDays($startDate,$endDate, $proj_hours){
     foreach($holidays as $holiday){
         //If the holiday doesn't fall in weekend
         $holitime = strtotime( $holiday );
-        if ( strtotime( $dly_cpcty[0] ) <= $holitime && $holitime <= strtotime( end($dly_cpcty) ) && date("N",$holitime) != 6 && date("N",$holitime) != 7)
-           $dly_cpcty =  array_diff($dly_cpcty, array($holiday));
+        if( isset($dly_cpcty[0]) ){
+        	if ( strtotime( $dly_cpcty[0] ) <= $holitime && $holitime <= strtotime( end($dly_cpcty) ) && date("N",$holitime) != 6 && date("N",$holitime) != 7)
+           		$dly_cpcty =  array_diff($dly_cpcty, array($holiday));
+   		}
     }
 	$dly_cpcty = array_flip($dly_cpcty);
 	// run through dly_cpcty and count for days after yesterday
