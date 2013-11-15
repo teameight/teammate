@@ -5,7 +5,6 @@ $t8_pm_proj = t8_pm_get_projs( $t8_pm_proj_id );
 $t8_pm_client_id = $t8_pm_proj[$t8_pm_proj_id]["cli_id"];
 $t8_pm_proj_name = $t8_pm_proj[$t8_pm_proj_id]["name"];
 $t8_pm_client_id = $t8_pm_proj[$t8_pm_proj_id]["cli_id"];
-$t8_pm_staff = $t8_pm_proj[$t8_pm_proj_id]["staff"];
 $t8_pm_est_hours = $t8_pm_proj[$t8_pm_proj_id]["est_hours"];
 $t8_pm_status = $t8_pm_proj[$t8_pm_proj_id]["status"];
 $t8_pm_start_date = $t8_pm_proj[$t8_pm_proj_id]["start_date"];
@@ -38,6 +37,7 @@ $t8_pm_proj_manager = $t8_pm_proj[$t8_pm_proj_id]["proj_manager"];
 $t8_pm_mstones = $t8_pm_proj[$t8_pm_proj_id]['misc']['milestones'];
 //echo '<pre>'; print_r($t8_pm_mstones); echo '</pre>';
 $task_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_tasks WHERE proj_id = ".$t8_pm_proj_id ); // collect task with this project id
+$t8_pm_hoursums = array();
 if($task_results){ foreach($task_results as $task){ // build array with id as key
 	if(!isset($t8_pm_proj[$task->stage])) $t8_pm_proj[$task->stage] = array();
 	$t8_pm_mstones[$task->stage]['tasks'][$task->id] = array(
@@ -46,15 +46,12 @@ if($task_results){ foreach($task_results as $task){ // build array with id as ke
 		'hours' => $task->est_hours,
 		'status' => $task->status
 	);
+	$t8_pm_hoursums[] = $task->est_hours;
 }}
-$t8_pm_hoursums = array();
-if($t8_pm_p_tasks){foreach($t8_pm_p_tasks as $task){ 
-	$t8_pm_hoursums[] = $task["est-hours"];
-}}
+
 $t8_pm_hoursums = array_sum($t8_pm_hoursums);
 $t8_pm_action = 'view';
 //krsort($t8_pm_p_tasks);
-uasort($t8_pm_p_tasks, "t8_pm_custom_sort");
 $task_status = array( "Current", "Submitted", "Completed");
 //echo '<pre>proj:'; print_r($t8_pm_proj); echo '</pre>';
 ?>
