@@ -336,7 +336,6 @@ global $wpdb;
 				<div class="empty<?php echo (!empty($t8_pm_day_tasks) ? ' hidden' : ''); ?>">
 					<h3>Not a lot going on</h3>
 				</div>
-
 			<?php
             }
 ?> 
@@ -348,8 +347,8 @@ global $wpdb;
 
 
         <div class="today-wrap">
-        	<a class="prevday" href="<?php echo admin_url( 'admin.php?page=t8-teammate/t8-teammate.php' ); echo '&d='.$prevday; ?>" title="Previous Day">previous day</a>
-            <a class="nextday" href="<?php echo admin_url( 'admin.php?page=t8-teammate/t8-teammate.php' ); echo '&d='.$nextday; ?>" title="Previous Day">next day</a>
+        	<a class="prevday" href="<?php echo add_query_arg('d',$prevday); ?>" title="Previous Day">previous day</a>
+        	<a class="nextday" href="<?php echo add_query_arg('d',$nextday); ?>" title="Next Day">next day</a>
             <form action="<?php echo admin_url( 'admin.php' ); ?>" method="get" >
 	        	<h2 class="th"><?php echo ( isset( $showdayText ) ? $showdayText : ''); ?> 
             	<input type="text" class="datepicker"  name="d" id="d" value="<?php echo date('D, M d, Y', $showday[0]); ?>" />

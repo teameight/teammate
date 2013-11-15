@@ -36,6 +36,7 @@ if ( ! empty( $user_query->results ) ) {
 		"caps" => ''
 	);
 } else { }
+//echo '<pre>'; print_r($pm_users); echo '</pre>';
 
 /*
 *
