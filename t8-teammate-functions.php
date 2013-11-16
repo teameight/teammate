@@ -1261,29 +1261,12 @@ function t8_pm_pc_drops() {
 			die();
 		}
 }
+add_action('wp_ajax_t8_pm_pc_drops', 't8_pm_pc_drops');
 
 
 /**
  * AJAX Functions
  */
-add_action('wp_ajax_t8_pm_tasksubmit', 't8_pm_tasksubmit');
-add_action('wp_ajax_t8_pm_find_cli_projs', 't8_pm_find_cli_projs');
-add_action('wp_ajax_t8_pm_cli_status', 't8_pm_cli_status');
-add_action('wp_ajax_t8_pm_find_proj_tasks', 't8_pm_find_proj_tasks');
-add_action('wp_ajax_t8_pm_find_dash_cli_tasks', 't8_pm_find_dash_cli_tasks');
-add_action('wp_ajax_t8_pm_find_dash_proj_tasks', 't8_pm_find_dash_proj_tasks');
-add_action('wp_ajax_t8_pm_show_stage', 't8_pm_today_task_flyout');
-add_action('wp_ajax_nopriv_t8_pm_show_stage', 't8_pm_today_task_flyout');
-add_action('wp_ajax_t8_pm_add_orphan_assign', 't8_pm_add_orphan_assign');
-add_action('wp_ajax_nopriv_t8_pm_add_orphan_assign', 't8_pm_add_orphan_assign');
-add_action('wp_ajax_t8_pm_update_todays_tasks', 't8_pm_update_todays_tasks');
-add_action('wp_ajax_nopriv_t8_pm_update_todays_tasks', 't8_pm_update_todays_tasks');
-add_action('wp_ajax_t8_pm_pc_drops', 't8_pm_pc_drops');
-add_action('wp_ajax_t8_pm_pc_punchin', 't8_pm_pc_punchin');
-add_action('wp_ajax_t8_pm_pc_punchout', 't8_pm_pc_punchout');
-add_action('wp_ajax_t8_pm_projtotrash', 't8_pm_projtotrash');
-add_action('wp_ajax_t8_pm_update_time_entry', 't8_pm_update_time_entry');
-add_action('wp_ajax_t8_pm_del_time_entry', 't8_pm_del_time_entry');
 /**
  * Projects
  */
@@ -1310,8 +1293,7 @@ function t8_pm_projtotrash() {
 		echo $return;
 		die();
 	}	
-/* PUNCH OUT */
-// DASHBOARD PUNCHCLOCK
+add_action('wp_ajax_t8_pm_projtotrash', 't8_pm_projtotrash');
 
 /* PUNCH IN */
 function t8_pm_pc_punchin() {
@@ -1353,7 +1335,9 @@ function t8_pm_pc_punchin() {
 		}
 		echo json_encode($pTimes);
 		die();
-	}	
+	}
+add_action('wp_ajax_t8_pm_pc_punchin', 't8_pm_pc_punchin');
+
 /* PUNCH OUT */
 function t8_pm_pc_punchout() {
    	global $wpdb, $userdata, $current_user;
@@ -1407,7 +1391,9 @@ function t8_pm_pc_punchout() {
 		echo json_encode($ptask);
 	}
 	die();
-}	
+}
+add_action('wp_ajax_t8_pm_pc_punchout', 't8_pm_pc_punchout');
+
 /* Edit Time Entry */
 function t8_pm_update_time_entry() {
    	global $wpdb;
@@ -1453,6 +1439,8 @@ function t8_pm_update_time_entry() {
 	echo json_encode($return);
 	die();
 }	
+add_action('wp_ajax_t8_pm_update_time_entry', 't8_pm_update_time_entry');
+
 /* Delete Time Entry */
 function t8_pm_del_time_entry() {
    	global $wpdb;
@@ -1471,82 +1459,7 @@ function t8_pm_del_time_entry() {
 	echo json_encode($return);
 	die();
 }	
-// !!! Gotta add Nonces to all these
-/* Add task list item to Punchclock 
-function t8_pm_punchclock_add() {
-   	global $wpdb, $userdata, $t8_pm_punchclock_option, $current_user;
-		get_currentuserinfo();
-		$punch_users = array();
-		$order = 'user_nicename';
-		$user_ids = $wpdb->get_col("SELECT ID FROM $wpdb->users ORDER BY $order");
-		foreach($user_ids as $user_id) {
-			if($user_id != "1"){
-				$user = get_userdata($user_id);
-				$punch_users[$user_id] = array(
-					"uname" => $user->display_name,
-					"uslug" => $user->user_nicename
-				);
-				$color = get_user_meta( $user_id, "color", true);
-				if($color!=''){$ltcolor = t8_pm_punchclock_hexLighter($color,30);}else{$color=$ltcolor='fff';}
-				$punch_users[$user_id]["color"] = $color;
-				$punch_users[$user_id]["ltcolor"] = $ltcolor;
-			}
-		}
-		echo "sumpin'";
-		if (! wp_verify_nonce($_POST['nonce'], 't8_pm_nonce') ){
-			die();
-		}
-		$table_name = $wpdb->prefix . 'pm_time';
-		if($_POST['start_time'] != ''){
-				$start_time = strtotime($_POST['start_time']);
-		}
-		$cli = intval( $_POST['cli'] );
-		$proj = intval( $_POST['proj'] );
-		$task = intval( $_POST['task'] );
-		$cli_name = esc_html( $_POST['cli_name'] );
-		$proj_name = esc_html( $_POST['proj_name'] );
-		$task_name = esc_html( $_POST['task_name'] );
-		if( is_numeric( $_POST['hours'] ) ) $hours = $_POST['hours'];
-		$assign = intval( $_POST['assign'] );
-		$notes = $_POST['notes'];
-		$end_time = $start_time + ( $hours * 60 * 60 );
-
-	$results = $wpdb->insert( $table_name, array( 
-			'task_id' => $task, 
-			'user_id' => $assign, 
-			'hours' => $hours, 
-			'notes' => $notes, 
-			'end_time' => date("Y-m-d H:i:s", $end_time), 
-			'start_time' => date("Y-m-d H:i:s", $start_time ), 
-			'cli_id' => $cli, 
-			'proj_id' => $proj
-		) 
-	);
-		if ( $results ) {
-		
-		$notes = wp_kses_stripslashes($notes);
-		
-		
-			$itemid = $wpdb->insert_id;
-			
-			$edit = '';
-			$edit .= '<a class="edit">Edit</a>';
-			$edit .= ' | <a class="delete">Delete</a>';
-			$additem .= '<td class="wc_item_date">'.esc_html( $_POST['start_time'] ).'</td>';
-			$additem .= '<td class="wc_item_person" style="background-color:#'.$punch_users[$assign]["ltcolor"].';">'.$punch_users[$assign]["uname"].'</td>';
-			$additem .= '<td class="wc_item_clijob">'.$cli_name.'::'.$proj_name.'::'.$task_name.'</td>';
-			$additem .= '<td class="wc_item_time">'.$hours.'</td>';
-			$additem .= '<td class="item_text">'.$notes.'</span></td>';
-			$additem .= '<td class="itemedits"></a>'.$edit.'</td>';
-			$additem .= '</tr>';
-			$return['success'] = $additem;
-		} else {
-			$return['success'] ='nope';
-		}
-			echo json_encode($return);
-			die();
-	}	
-*/
+add_action('wp_ajax_t8_pm_del_time_entry', 't8_pm_del_time_entry');
 
 
 /* Handle Submit Task Checkboxes */
@@ -1580,29 +1493,13 @@ function t8_pm_tasksubmit() {
 		$message = __('There was a problem submitting the task.', 't8-pm');
 	}
 	echo $message;
-	die(); // this is required to return a proper result
+	die();
 }
-/* Handle Notes Saving by task */
-function t8_pm_notessave() {
-	global $wpdb; // this is how you get access to the database
+add_action('wp_ajax_t8_pm_tasksubmit', 't8_pm_tasksubmit');
 
-	$taskid = intval($_POST['taskid']);
-	$notes = esc_html($_POST['notes']);
-	$task_array = array(
-		'notes' => $notes,
-	);
-	$resultstasks = $wpdb->update( $wpdb->prefix . 'pm_tasks', $task_array, array('id' => $taskid) );
-	if ( $resultstasks ) {
-		$message = __('Task notes were saved', 't8-pm');
-	} else {
-		$message = __('There was a problem saving the notes.', 't8-pm');
-	}
-	echo $message;
-	die(); // this is required to return a proper result
-}
-/* Handle Notes Saving by task */
+/* Handle Notes Saving by task 
 function t8_pm_cli_status() {
-	global $wpdb; // this is how you get access to the database
+	global $wpdb; 
 
 	$cliid = intval($_POST['cliid']);
 	$status = intval($_POST['status']);
@@ -1614,8 +1511,11 @@ function t8_pm_cli_status() {
 		$message = __('Client was moved', 't8-pm');
 		echo $message;
 	}
-	die(); // this is required to return a proper result
+	die();
 }
+add_action('wp_ajax_t8_pm_cli_status', 't8_pm_cli_status');
+
+*/
 
 function t8_pm_today_task_flyout() {
 	global $wpdb, $current_user;
@@ -1722,7 +1622,10 @@ function t8_pm_today_task_flyout() {
 	// echo '<pre>'; print_r($t8_pm_p_milestones); echo'</pre>'; 
     die();
 }
+add_action('wp_ajax_t8_pm_show_stage', 't8_pm_today_task_flyout');
+
 /* Build proj and cli lists on cli change */
+// !!! I think this is replaced with pc_drops
 function t8_pm_find_dash_cli_tasks() {
    	global $wpdb, $userdata;
 	$wpdb->show_errors();
@@ -1764,7 +1667,10 @@ function t8_pm_find_dash_cli_tasks() {
 		die();
 
 }
+add_action('wp_ajax_t8_pm_find_dash_cli_tasks', 't8_pm_find_dash_cli_tasks');
+
 /* Build proj and task lists on cli change */
+// !!! I think this is replaced with pc_drops
 function t8_pm_find_dash_proj_tasks() {
    	global $wpdb, $userdata;
 	$wpdb->show_errors();
@@ -1792,70 +1698,8 @@ function t8_pm_find_dash_proj_tasks() {
 			echo $newproj;
 		}
 		die();
-
 }
-
-/* Update Time table with orphan assigns and add their data to the dtask div */
-function t8_pm_add_orphan_assign() {
-   	global $wpdb;
-	$wpdb->show_errors();
-		if (! wp_verify_nonce($_POST['nonce'], 't8_pm_nonce') ){
-			die();
-		}
-		//Client list
-		$cli_results = $wpdb->get_results("SELECT id, name FROM ".$wpdb->prefix . 'pm_cli' ); // collect Client names and id
-		if($cli_results){ foreach($cli_results as $client){ // build array with id as key
-			$clients[$client->id]["name"] = $client->name;
-		}}
-		//Project Name list
-		$proj_name_results = $wpdb->get_results("SELECT id, name FROM ".$wpdb->prefix . 'pm_projects' ); // collect Project names and id
-		if($proj_name_results){ foreach($proj_name_results as $proj){
-			$projnames[$proj->id]['name'] = $proj->name;
-		}}
-		
-		$cli = (isset($_POST['cli']) ? intval($_POST['cli']) : '');
-		$proj = (isset($_POST['proj']) ? intval($_POST['proj']) : '');
-		$task = (isset($_POST['task']) ? intval($_POST['task']) : '');
-		$desc = $_POST['desc'];
-		$oass = intval($_POST['oass']);
-		$date = date("Y-m-d H:i:s", strtotime($_POST['date']) );
-		
-		$time_array = array(
-			'cli_id'	=> $cli,
-			'proj_id'	=> $proj,
-			'task_id'	=> $task,
-			'notes'		=> $desc,
-			'user_id'	=> $oass,
-			'end_time'	=> $date
-		);
-		$format_array = array(
-			'%d',
-			'%d',
-			'%d',
-			'%s',
-			'%d',
-			'%d'
-		);
-		
-		$timeresults = $wpdb->insert( $wpdb->prefix . 'pm_time', $time_array, $format_array );
-		
-		if($timeresults) {
-			$return['id'] = $wpdb->insert_id;
-			$return['cli_id'] = $time_array['cli_id'];
-			$return['proj_id'] = $time_array['proj_id'];
-			$return['task_id'] = $time_array['task_id'];
-			$return['notes'] = $time_array['notes'];
-			$return['user_id'] = $time_array['user_id'];
-			$return['end_time'] = $time_array['end_time'];
-			$return['cli_name'] = $clients[$time_array['cli_id']]['name'];
-			$return['proj_name'] = $projnames[$time_array['proj_id']]['name'];
-			echo json_encode($return);			
-		} else {
-			$message = 'There was a problem creating the assignment';
-			echo $message;
-		}
-		die();
-}
+add_action('wp_ajax_t8_pm_find_dash_proj_tasks', 't8_pm_find_dash_proj_tasks');
 
 // Save Today's Tasks to usermeta
 function t8_pm_update_todays_tasks() {
@@ -1902,7 +1746,7 @@ function t8_pm_update_todays_tasks() {
 
 	die();
 }
-	//come back to this. need to create an array of the tasks/assigns with ids and types, stored under a datestamp
+add_action('wp_ajax_t8_pm_update_todays_tasks', 't8_pm_update_todays_tasks');
 
 function t8_pm_install () {
 	global $wpdb;
