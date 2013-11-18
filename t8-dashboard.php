@@ -130,7 +130,7 @@ global $wpdb;
 					AND DATE(start_time) = '".$showday['year']."-".$showday['mon']."-".$showday['mday']."'  
 					ORDER BY end_time DESC"
 			); // !!! need to switch all time entries in database to use mysql time, this currently just gets everything clocked today and after
-			$punched_tasks = array();
+			$punched_tasks = $punched_clis = array();
 			if($punched_results){
 				foreach($punched_results as $punched){ // build array with id as key
 					$t8_pm_punched[$punched->id] = array(
@@ -147,29 +147,21 @@ global $wpdb;
 				}
 			}
 			$common_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_tasks WHERE assign = 'all' AND status < 2"); // collect tasks from schedule
+			$commonTasks = array();
 			if($common_results){
 				foreach($common_results as $task){
 					$commonTasks[]=$task->id;
 				}
 			}
 // Now get all tasks in one query:
-			if( !empty( $dayplanner[$year][$day]['task']) ) {
-				$getTasksIdR = array_merge( $schedTasks, $dayplanner[$year][$day]['task'], $punched_tasks );
-			}else{
-				if(!empty($schedTasks)) $getTasksIdR = $schedTasks;
-			}
-			if( !empty( $getTasksIdR ) ) {
-				if( !empty( $commonTasks ) ) $getTasksIdR = array_merge( $getTasksIdR, $commonTasks );
-			}else{
-				$getTasksIdR = $commonTasks;
-			}
-			// !!! probably need to set the aboves to empty arrays first
+			if( !isset( $dayplanner[$year][$day]['task'] ) ) $dayplanner[$year][$day]['task'] = array();
+			$getTasksIdR = array_merge( $schedTasks, $dayplanner[$year][$day]['task'], $punched_tasks, $schedTasks, $commonTasks );
 			
 // echo '<pre>'; print_r($getTasksIdR); echo '</pre>'; 
+			$t8_pm_day_tasks = $task_clis = $clients = array();
 			if( !empty($getTasksIdR) ) {
 				$task_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_tasks WHERE id IN(" . implode(',', $getTasksIdR).")" ); // collect tasks from schedule
 				if($task_results){
-					$cli_ids = $clients = array();
 					foreach($task_results as $task){ // build array with id as key
 						$task_due = ($task->due != '' ? $task->due : $projnames[$task->proj_id]['end_date']);
 						$days_left = human_time_diff( $today[0], strtotime($task_due) ); // old: ceil( (strtotime($task_due) - $today[0])/(60*60*24) ); 
@@ -178,7 +170,6 @@ global $wpdb;
 						    'title' 		=> $task->task_title,  
 						    'cli-id' 		=> ($task->cli_id != 0 ? $task->cli_id : ''),
 						    'proj-id' 		=> ($task->proj_id != 0 ? $task->proj_id : ''),
-					//	    'cli-name' 		=> ($task->cli_id != 0 ? $clients[$task->cli_id]['name'] : ''),  
 						    'proj-name' 	=> ($task->proj_id != 0 ? $projnames[$task->proj_id]['name'] : ''),  
 						    'assign' 		=> $task->assign,
 						    'stage' 		=> $task->stage,
@@ -187,15 +178,16 @@ global $wpdb;
 						    'hours' 		=> $task->est_hours,
 						    'days-left' 	=> $days_left 
 						);
-						$cli_ids[] = $task->cli_id;
-					}
-					if( !empty($cli_ids) ) $clients = t8_pm_get_clis( $cli_ids );
-					if( !empty($clients) ) {
-						foreach ($t8_pm_day_tasks as $tid => $taskR) {
-							$t8_pm_day_tasks[$tid]['cli-name'] = $clients[$t8_pm_day_tasks[$tid]['cli-id']]['name'];
-						}
+						$task_clis[] = $task->cli_id;
 					}
 				}
+			}
+			$cli_ids = array_merge( $punched_clis, $task_clis );
+				if( !empty( $cli_ids ) ) {
+				$clients = t8_pm_get_clis( $cli_ids );
+			}
+			foreach ($t8_pm_day_tasks as $tid => $taskR) {
+				$t8_pm_day_tasks[$tid]['cli-name'] = $clients[$taskR['cli-id']]['name'];
 			}
 
 			$task_status = array( "Current", "Submitted", "Completed");

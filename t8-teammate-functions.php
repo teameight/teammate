@@ -634,17 +634,26 @@ function t8_pm_display_schedule( $proj_id ) {
 	if($project){
 		// first check to see if sched is up to date
 		$pm_schedule = json_decode( $project->schedule, true );
+		// get last work day before today
 		$yesterday = date("Y-m-d", time() - 60 * 60 * 24);
-		$yestercheck = 0;
-		if (isset($pm_schedule[$yesterday])) {
-			foreach ($pm_schedule[$yesterday] as $assign => $assR) {
-				if( $assR['hours'] ) $yestercheck = 1;
-			}
+		if( $project->start_date <= $yesterday ){ // don't recalc sched if start date is still in the future
+			// get the workdays in this project up until yesterday
+			$work_days_check = t8_pm_getWorkDays( $project->start_date, $yesterday, 20 );
+			end($work_days_check);
+			$yesterday = key($work_days_check);
+			$yestercheck = 0;
+
+			if (isset($pm_schedule[$yesterday])) {
+				foreach ($pm_schedule[$yesterday] as $assign => $assR) {
+					if( $assR['hours'] ) $yestercheck = 1;
+				}
+			} //elseif ()
+			if( $yestercheck || empty($pm_schedule ) ) {
+				echo 'RESCHED';
+				$resched = t8_pm_schedule( $proj_id, $project->start_date, $project->end_date );
+				$pm_schedule = $resched['pm_schedule'];
+			} 
 		}
-		if( $yestercheck || empty($pm_schedule) ) {
-			$resched = t8_pm_schedule( $proj_id, $project->start_date, $project->end_date );
-			$pm_schedule = $resched['pm_schedule'];
-		} 
 
 		$proj_hoursRaw = $project->est_hours;
 		$stgHrs = array();
@@ -671,9 +680,6 @@ function t8_pm_display_schedule( $proj_id ) {
 		$proj_hourstot = 0;
 		if( !empty( $pm_schedule ) ){ foreach( $pm_schedule as $date => $dateR ){
 			foreach ($dateR as $assign => $sched_day) {
-			//	$date = strtotime( $sched->date );
-			//	$pm_schedule[$sched->assign][$date]['hours'] = $sched->hours;
-			//	$pm_schedule[$sched->assign][$date]['task_times'] = json_decode( $sched->task_times );
 				if( !isset($dly_cpcty[$date]) ) $dly_cpcty[$date] = 0;
 				$dly_cpcty[$date] += $sched_day['hours'];
 				$proj_hourstot += $sched_day['hours'];
@@ -1155,7 +1161,7 @@ function t8_pm_totals ($projquery){
 /**
  * Build array of business days between two dates. Skips the holidays.
  */
-function t8_pm_getWorkDays($startDate,$endDate, $proj_hours){
+function t8_pm_getWorkDays( $startDate, $endDate, $proj_hours ){
     // do strtotime calculations just once
     $day_stamp = strtotime($startDate);
     $end_stamp = strtotime($endDate);
@@ -1209,7 +1215,11 @@ function t8_pm_getWorkDays($startDate,$endDate, $proj_hours){
 	foreach($dly_cpcty as $date => $cap){
 		if( strtotime( $date ) > $yester ) $i++;
 	}
-	$dly_hrs = $proj_hours/$i;
+	if( $i ) {
+		$dly_hrs = $proj_hours/$i;
+	} else {
+		$dly_hrs = 0;
+	}
 	foreach($dly_cpcty as $date => $cap){
 		$dly_cpcty[$date] = ( strtotime( $date ) > $yester ? $dly_hrs : 0 );
 	}
