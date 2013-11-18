@@ -36,6 +36,7 @@ $t8_pm_proj_manager = $t8_pm_proj[$t8_pm_proj_id]["proj_manager"];
  */
 $t8_pm_mstones = $t8_pm_proj[$t8_pm_proj_id]['misc']['milestones'];
 //echo '<pre>'; print_r($t8_pm_mstones); echo '</pre>';
+global $wpdb;
 $task_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_tasks WHERE proj_id = ".$t8_pm_proj_id ); // collect task with this project id
 $t8_pm_hoursums = array();
 if($task_results){ foreach($task_results as $task){ // build array with id as key
@@ -54,6 +55,7 @@ $t8_pm_action = 'view';
 //krsort($t8_pm_p_tasks);
 $task_status = array( "Current", "Submitted", "Completed");
 //echo '<pre>proj:'; print_r($t8_pm_proj); echo '</pre>';
+$clients = t8_pm_get_clis( $t8_pm_client_id );
 ?>
 <div class="wrap view-project t8-pm">
 	<h2><?php echo $clients[$t8_pm_client_id]['name']; ?> :: <?php echo $t8_pm_proj_name; ?></h2>

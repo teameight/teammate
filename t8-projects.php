@@ -1,5 +1,4 @@
 <?php
-  // !!! This is where you do a GET check and load the edit files, etc instead if it is set  
 if( isset($_POST['write-proj']) ){
 	$_POST['action'] = $_GET['action'];
 	$writeres = t8_pm_write_proj();
@@ -7,12 +6,13 @@ if( isset($_POST['write-proj']) ){
 	if( isset( $writeres['warning'] ) ) $t8_pm_warning = $writeres['warning'];
 	$_GET['action'] = 'edit';
 } 
-include_once( plugin_dir_path(__FILE__).'t8-lists.php' ); // !!! I'm calling this everywhere, need to only call when needed, address creating globals
+
 /**
  * build user select list
  */
 $current_user = wp_get_current_user();
-global $pm_users;
+global $wpdb, $pm_users;
+$status_r = array( "Proposed", "Active", "Archived", "Trash" );
 $user_color = $pm_users[$current_user->ID]['color'];
 
 	/**
@@ -28,7 +28,7 @@ $user_color = $pm_users[$current_user->ID]['color'];
 			include_once( plugin_dir_path(__FILE__).'projects/t8-projects-view.php' );
 
 		} else {
-			
+			// !!! these proj vars should follow the same architecture as a project array from the database
 			$t8_pm_action = $_GET['action'];
 			if($_GET['action'] === 'new' ){
 				$t8_pm_proj_id 			= 
@@ -61,13 +61,15 @@ $user_color = $pm_users[$current_user->ID]['color'];
 				$task_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_tasks WHERE proj_id = ".$t8_pm_proj_id ); // collect task with this project id
 					if($task_results){
 						foreach($task_results as $task){ // build array with id as key
-						$t8_pm_p_tasks[$task->id]['title'] = $task->task_title;
-						$t8_pm_p_tasks[$task->id]['proj-id'] = $task->proj_id;
-						$t8_pm_p_tasks[$task->id]['cli-id'] = $task->cli_id;
-						$t8_pm_p_tasks[$task->id]['hours'] = $task->est_hours;
-						$t8_pm_p_tasks[$task->id]['assign'] = $task->assign;
-						$t8_pm_p_tasks[$task->id]['status'] = $task->status;
-						$t8_pm_p_tasks[$task->id]['stage'] = $task->stage;
+							$t8_pm_p_tasks[$task->id] = array(
+								'title' 	=> $task->task_title,
+								'proj-id' 	=> $task->proj_id,
+								'cli-id' 	=> $task->cli_id,
+								'hours' 	=> $task->est_hours,
+								'assign' 	=> $task->assign,
+								'status' 	=> $task->status,
+								'stage' 	=> $task->stage
+							);
 						}
 					} else {
 						$t8_pm_p_tasks = array();
@@ -94,6 +96,13 @@ $user_color = $pm_users[$current_user->ID]['color'];
 				// trash projects, I think this will get handled elsewhere
 			}
 		}else{
+
+			// include files for Projects List class
+			if( ! class_exists( 'WP_List_Table' ) ) {
+			    require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
+			}
+			include_once( plugin_dir_path(__FILE__).'projects/t8-projects-class-list-table.php' );
+
 ?>
 	<div class="wrap t8-pm">
 		<?php if(isset($t8_pm_warning)){ ?><div class="error"><?php echo $t8_pm_warning; ?></div><?php } ?>

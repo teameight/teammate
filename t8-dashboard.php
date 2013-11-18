@@ -1,5 +1,4 @@
 <?php
-include_once( plugin_dir_path(__FILE__).'t8-lists.php' );
 $current_user = wp_get_current_user();
 
 // check if day is specified in url, if not use current day
@@ -18,10 +17,10 @@ $year2day = $today['year'];
     <?php if(isset($t8_pm_warning)){ ?><div id="message" class="error"><?php echo $t8_pm_warning; ?></div><?php } ?>
     <?php if(isset($t8_pm_updated)){ ?><div id="message" class="updated"><?php echo $t8_pm_updated; ?></div><?php } ?>
 <?php
-	if ( function_exists('wp_nonce_field') ) wp_nonce_field('t8_pm_nonce','t8_pm_nonce');
+	wp_nonce_field('t8_pm_nonce','t8_pm_nonce');
 	
 global $wpdb;
-	$wpdb->show_errors = true;
+	$wpdb->show_errors = true; // !!! read up on this
 	//Project Name list
 	$proj_name_results = $wpdb->get_results("SELECT id, name, end_date, proj_manager, misc FROM ".$wpdb->prefix . 'pm_projects' ); // collect Project names and id
 	if($proj_name_results){ foreach($proj_name_results as $proj){
@@ -170,6 +169,7 @@ global $wpdb;
 			if( !empty($getTasksIdR) ) {
 				$task_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_tasks WHERE id IN(" . implode(',', $getTasksIdR).")" ); // collect tasks from schedule
 				if($task_results){
+					$cli_ids = $clients = array();
 					foreach($task_results as $task){ // build array with id as key
 						$task_due = ($task->due != '' ? $task->due : $projnames[$task->proj_id]['end_date']);
 						$days_left = human_time_diff( $today[0], strtotime($task_due) ); // old: ceil( (strtotime($task_due) - $today[0])/(60*60*24) ); 
@@ -178,7 +178,7 @@ global $wpdb;
 						    'title' 		=> $task->task_title,  
 						    'cli-id' 		=> ($task->cli_id != 0 ? $task->cli_id : ''),
 						    'proj-id' 		=> ($task->proj_id != 0 ? $task->proj_id : ''),
-						    'cli-name' 		=> ($task->cli_id != 0 ? $clients[$task->cli_id]['name'] : ''),  
+					//	    'cli-name' 		=> ($task->cli_id != 0 ? $clients[$task->cli_id]['name'] : ''),  
 						    'proj-name' 	=> ($task->proj_id != 0 ? $projnames[$task->proj_id]['name'] : ''),  
 						    'assign' 		=> $task->assign,
 						    'stage' 		=> $task->stage,
@@ -187,6 +187,13 @@ global $wpdb;
 						    'hours' 		=> $task->est_hours,
 						    'days-left' 	=> $days_left 
 						);
+						$cli_ids[] = $task->cli_id;
+					}
+					if( !empty($cli_ids) ) $clients = t8_pm_get_clis( $cli_ids );
+					if( !empty($clients) ) {
+						foreach ($t8_pm_day_tasks as $tid => $taskR) {
+							$t8_pm_day_tasks[$tid]['cli-name'] = $clients[$t8_pm_day_tasks[$tid]['cli-id']]['name'];
+						}
 					}
 				}
 			}
