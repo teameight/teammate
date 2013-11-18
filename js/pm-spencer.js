@@ -716,6 +716,23 @@ if ($("#tasks").length > 0){
 		});
 			
 	});
+	// on projects list screen, delete project and its data
+	$('div.t8-pm .delproj').click(function(e) {
+		var link = $(this);	
+		e.preventDefault();
+		var proj_id = link.data('proj'),
+			nonce = $('input#t8_pm_nonce').val();
+		var data = {
+			action: 't8_pm_delproj',
+			proj_id: proj_id,
+			nonce : nonce
+		};
+		$.post(ajaxurl, data, function(response) {
+				$('tr#projrow-'+proj_id ).fadeOut( 600, function(){ $(this).remove(); });
+				$('div.wrap.t8-pm').prepend('<div class="updated">' + response + '</div>');
+		});
+			
+	});
 	$('div.t8-pm').on("click", "td a.edittime", function(e) {
 		var link = $(this);
 		var timerow = link.closest("tr");

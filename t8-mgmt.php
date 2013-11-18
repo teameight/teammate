@@ -2,9 +2,9 @@
 <div class="wrap t8-pm">
     <?php if(isset($t8_pm_warning)){ ?><div id="message" class="error"><?php echo $t8_pm_warning; ?></div><?php } ?>
     <?php if(isset($t8_pm_updated)){ ?><div id="message" class="updated"><?php echo $t8_pm_updated; ?></div><?php } ?>
-<?php	// 
+<?php	// !!! need to research and fix the warnings above and on all pages
+    global $wpdb, $pm_users;
 	if(isset($_POST['manage-cli'])){
-		global $wpdb;
 		$t8_pm_cli_table = $wpdb->prefix . "pm_cli";
 		if($_POST["manage-cli"]=="create"){
 			$t8_pm_cli_name = esc_html($_POST['t8_pm_client_name']);
@@ -58,7 +58,6 @@
 			$t8_pm_warning .= "<p>Department could not be edited.</p>";
 		}
 	} //end if $_POST
-	include_once( plugin_dir_path(__FILE__).'t8-lists.php' ); //load in lists 
 	$t8_user_select = array();  //build user select list
 	if($pm_users){ foreach($pm_users as $pm_userid => $pm_user){ $t8_user_select[] = '<option value="'.$pm_userid.'">'.$pm_user["uname"].'</option>'; } }
 ?>
@@ -94,9 +93,9 @@
     </form>
     <h3><?php echo $cli_statuses[$cli_status]; ?> Clients</h3>
     <?php if(isset( $_GET['status'] ) && $_GET['status'] == '1' ){ ?>
-    <a href="<?php echo admin_url( 'admin.php' ); ?>?page=t8-teammate/t8-teammate.php_mgmt&tab=clients">Veiw Active Clients</a>
+    <a href="<?php echo remove_query_arg('status') ?>">Veiw Active Clients</a>
     <?php } else { ?>
-    <a href="<?php echo admin_url( 'admin.php' ); ?>?page=t8-teammate/t8-teammate.php_mgmt&tab=clients&status=1">Veiw Retired Clients</a>
+    <a href="<?php echo add_query_arg('status','1') ?>">Veiw Retired Clients</a>
     <?php } ?>
     <table class="wp-list-table widefat fixed posts" cellspacing="0">
         <thead>
@@ -129,6 +128,8 @@
         </tfoot>
         <tbody id="the-list">
     <?php 
+    // get all clients
+    $clients = t8_pm_get_clis();
     if ( !empty($clients) ) {
     	foreach($clients as $client_id => $client) { if( $client["status"] == $cli_status ) { ?>
             <tr valign="top">

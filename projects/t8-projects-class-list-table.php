@@ -14,7 +14,6 @@ class t8_pm_Project_Table extends WP_List_Table {
 
 	function __construct(){
 		global $status, $page;
-		add_action( 'admin_head', array( &$this, 'admin_header' ) );
 
 		parent::__construct( array(
 			'singular'  => __( 'project', 't8_pm_projtable' ),     //singular name of the listed records
@@ -23,17 +22,6 @@ class t8_pm_Project_Table extends WP_List_Table {
 		) );
 		$this->nonce = wp_create_nonce( 't8-pm-nonce' );
     }
-
-	function admin_header() {
-		$page = ( isset($_REQUEST['page'] ) ) ? esc_attr( $_REQUEST['page'] ) : false;
-	//	if( 't8-teammate%2Ft8-teammate.php_projects2' != $page ) // !!! this is wrong, need to figure out how to check for submenu page
-	//	return; 
-		
-		echo '<style type="text/css">';
-//		echo '.wp-list-table .column-id { width: 5%; }';
-		echo '.wp-list-table .column-title { width: 45%; }';
-		echo '</style>';
-	}
 	function project_data(){
 		global $wpdb, $pm_users;
 		// If no status, default to current
@@ -58,18 +46,25 @@ class t8_pm_Project_Table extends WP_List_Table {
 		if($proj_results){ 
 			foreach($proj_results as $project){ // build array with id as key
 				// !!! need to remove uneeded items from array
-				$projects_r[$project->id]["ID"] = $project->id;
-				$projects_r[$project->id]["title"] = $project->name;
-				$projects_r[$project->id]["cli_id"] = $project->cli_id;
-				$projects_r[$project->id]["hours"] = $t8_pm_tots_hours[] = $project->est_hours;
-				$projects_r[$project->id]["status"] = $project->status;
-				$projects_r[$project->id]["start_date"] = date('D M jS, Y', strtotime($project->start_date) );
-				$projects_r[$project->id]["end_date"] = date('D M jS, Y', strtotime($project->end_date ) );
-				$projects_r[$project->id]["price"] = $t8_pm_tots_price[] = '$'.$project->price;
-				$projects_r[$project->id]["proj_manager"] = ($pm_users ? $pm_users[$project->proj_manager]['uname'] : $project->proj_manager );
-				$projects_r[$project->id]["class"] = ($pm_users ? 'user-'.$pm_users[$project->proj_manager]['uslug'] : 'user-'.$project->proj_manager );
-				$cli_ids[] = $project->cli_id;
-				$proj_ids[] = $project->id;
+				if( !isset( $pm_users[$project->proj_manager] ) ) $project->proj_manager = 'all';
+				$proj_manager 	= ($pm_users ? $pm_users[$project->proj_manager]['uname'] : $project->proj_manager );
+				$class 			= ($pm_users ? 'user-'.$pm_users[$project->proj_manager]['uslug'] : 'user-'.$project->proj_manager );
+				$projects_r[$project->id] = array(
+					"ID" 			=> $project->id,
+					"title" 		=> $project->name,
+					"cli_id" 		=> $project->cli_id,
+					"hours" 		=> $project->est_hours,
+					"status" 		=> $project->status,
+					"start_date" 	=> date('D M jS, Y', strtotime($project->start_date) ),
+					"end_date" 		=> date('D M jS, Y', strtotime($project->end_date) ),
+					"price" 		=> '$'.$project->price,
+					"proj_manager" 	=> $proj_manager,
+					"class" 		=> $class
+				);
+				$t8_pm_tots_hours[] = $project->est_hours;
+				$t8_pm_tots_price[] = '$'.$project->price;
+				$cli_ids[] 		= $project->cli_id;
+				$proj_ids[] 	= $project->id;
 			}
 		}
 		// used Client ID list from proj query to get client names and write into to proj array, added to title td
@@ -110,7 +105,6 @@ class t8_pm_Project_Table extends WP_List_Table {
 				}
 			}
 		}
-		
 		return $projects_r;
 	}
 
@@ -182,7 +176,7 @@ class t8_pm_Project_Table extends WP_List_Table {
 		
 	function get_sortable_columns() {
 	  $sortable_columns = array(
-		'title' 			=> array('title',false),
+		'title' 			=> array('name',false),
 		'start_date'    => array('start_date',false),
 		'end_date'    => array('end_date',false),
 		'price'      	=> array('price',false),
@@ -213,14 +207,17 @@ class t8_pm_Project_Table extends WP_List_Table {
 		$proj_status = ( isset($_REQUEST['proj_status']) ? $_REQUEST['proj_status'] : 'active');
 	}
 	function column_title($item) {
-	  $actions = array(
-				'view'      => sprintf('<a title="%s" href="?page=%s&action=%s&project=%s">View</a>','Manage this project',$_REQUEST['page'],'view',$item['ID'] ),
-				'edit'      => sprintf('<a title="%s" href="?page=%s&action=%s&project=%s">Edit</a>','Edit this project',$_REQUEST['page'],'edit',$item['ID'] ),
-				'duplicate'      => sprintf('<a title="%s" href="?page=%s&action=%s&project=%s">Duplicate</a>','Create a new project based on this one',$_REQUEST['page'],'duplicate',$item['ID'] ),
-				'trash'    => sprintf('<a class="trashproj" data-proj="%s" data-nonce="%s" title="%s" href="?page=%s&action=%s&project=%s">Trash</a>',$item['ID'],$this->nonce,'Move this project to the trash',$_REQUEST['page'],'trash',$item['ID']  ),
-			);
+		$actions = array(
+			'view'      => sprintf('<a title="%s" href="?page=%s&action=%s&project=%s">View</a>','Manage this project',$_REQUEST['page'],'view',$item['ID'] ),
+			'edit'      => sprintf('<a title="%s" href="?page=%s&action=%s&project=%s">Edit</a>','Edit this project',$_REQUEST['page'],'edit',$item['ID'] ),
+			'duplicate'      => sprintf('<a title="%s" href="?page=%s&action=%s&project=%s">Duplicate</a>','Create a new project based on this one',$_REQUEST['page'],'duplicate',$item['ID'] ),
+			'trash'    => sprintf('<a class="trashproj" data-proj="%s" data-nonce="%s" title="%s" href="?page=%s&action=%s&project=%s">Trash</a>',$item['ID'],$this->nonce,'Move this project to the trash',$_REQUEST['page'],'trash',$item['ID']  )
+		);
+		if( 3 == $item['status'] ){
+			$actions['trash'] = sprintf('<a class="delproj" data-proj="%s" data-nonce="%s" title="%s" href="?page=%s&action=%s&project=%s">Delete</a>', $item['ID'], $this->nonce, 'Delete this project and its data', $_REQUEST['page'], 'delete',$item['ID']  );
+		}
 	
-	  return sprintf('%1$s %2$s', $item['title'], $this->row_actions($actions) );
+		return sprintf('%1$s %2$s', $item['title'], $this->row_actions($actions) );
 	}
 
 } //class t8_pm_Project_Table

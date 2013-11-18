@@ -1,32 +1,40 @@
 <?php
-global $wpdb; //set ur globals
 
-$t8_pm_colors = array(
-	'FF5300',
-	'FFA400',
-	'DC0055',
-	'00AB6F',
-	'620CAC',
-	'06799F',
-	'FFBF00',
-	'B1F100',
-	'14D100',
-	'FFEF00',
-	'C10087'
-);
+/**
+ * Create users array
+ *
+ * @return array User Data including assigned color
+*/
+function t8_pm_create_users_array() {
+global $wpdb;
+//	!!! eventually this will filter user by appropriate cap
+	$colors = array(
+		'FF5300',
+		'FFA400',
+		'DC0055',
+		'00AB6F',
+		'620CAC',
+		'06799F',
+		'FFBF00',
+		'B1F100',
+		'14D100',
+		'FFEF00',
+		'C10087'
+	);
 
-$user_query = new WP_User_Query( array( 'orderby' => 'display_name') );
-if ( ! empty( $user_query->results ) ) {
-	$i = 0;
-	foreach ( $user_query->results as $user ) {
-		$pm_users[$user->ID] = array( // build users array with id, name and slug
-			"uname" => $user->display_name,
-			"uslug" => $user->user_nicename,
-			"color" => $t8_pm_colors[$i],
-			"caps" => $user->t34m8_wp_capabilities
-		);
-		$i++;
-		if( $i > count($t8_pm_colors) ) $i = 0;
+	$user_query = new WP_User_Query( array( 'orderby' => 'display_name') );
+	if ( ! empty( $user_query->results ) ) {
+		$i = 0;
+		foreach ( $user_query->results as $user ) {
+			$pm_users[$user->ID] = array( // build users array with id, name and slug
+				"uname" => $user->display_name,
+				"uslug" => $user->user_nicename,
+				"color" => $colors[$i],
+				"caps" => $user->t34m8_wp_capabilities
+			);
+			$i++;
+			if( $i > count($colors) ) $i = 0;
+		}
 	}
 	// !!! need to move this to a plugin option
 	$pm_users['all'] = array( // build users array with id, name and slug
@@ -35,22 +43,12 @@ if ( ! empty( $user_query->results ) ) {
 		"color" => '888888',
 		"caps" => ''
 	);
-} else { }
 
-/*
-*
-* Functions
-*
-*/
-if( ! class_exists( 'WP_List_Table' ) ) {
-    require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
+	return $pm_users;
 }
+// set this user array as a global
+$pm_users = t8_pm_create_users_array();
 
-// Projects includes - !!! should these be conditional, only for projects pages? - prolly
-
-include_once( plugin_dir_path(__FILE__).'projects/t8-projects-class-list-table.php' );
-
-include_once( plugin_dir_path(__FILE__).'reports/t8-time-class-list-table.php' );
 
 /*
 * Write Projects
@@ -199,7 +197,7 @@ function t8_pm_write_proj() {
  * Create readout for task status select.
  *
  * @param  string $tid task id. 
- * @param  array $task array including proj-man (user_id), status, stage, and assign of task. 
+ * @param  array $task array including proj-man(user_id), status, stage, and assign of task. 
  * @return  echo matched checkbox. 
 */
 function t8_pm_task_statuses($tid = 0, $task = array() ) {
@@ -252,6 +250,72 @@ function t8_pm_assign_select($selected_user = 0, $exclude_everyone = false ) {
     }
     return $return;
 }
+/**
+ * Get Client(s).
+ *
+ * @param  int $cli_id Client Id. 
+ * @return  array $return list of clients with data by id 
+*/
+function t8_pm_get_clis( $cli_id = 0 ) {
+	global $wpdb; //set ur globals
+	if( !$cli_id ){
+		$cli_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_cli "); // collect all Clients
+	} elseif ( is_array( $cli_id ) ) {
+		$cli_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_cli WHERE id IN('". implode("', '", $cli_id ) . "')"); // collect Client
+	} else {
+		$cli_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_cli WHERE id = " . $cli_id ); // collect Client
+	}
+	if($cli_results){ foreach($cli_results as $cli){ // build array with id as key
+		$clis[$cli->id]["name"] = $cli->name;
+		$clis[$cli->id]["status"] = $cli->status;
+	}}
+	return $clis;
+}
+/**
+ * Get project(s).
+ *
+ * @param  int $proj_id Project Id. 
+ * @return  array $return list of projects with data by id 
+*/
+function t8_pm_get_projs( $proj_id ) {
+	global $wpdb; //set ur globals
+	if( is_array( $proj_id ) ) {
+		$proj_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_projects WHERE id IN('". implode("', '", $proj_id ) . "')"); // collect Projects
+	} else {
+		$proj_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_projects WHERE id = " . $proj_id ); // collect Project
+	}
+	if($proj_results){ foreach($proj_results as $project){ // build array with id as key
+		$projs[$project->id] = array( // build proj array
+			"name" => 			$project->name,
+			"cli_id" => 		$project->cli_id,
+			"est_hours" => 		$project->est_hours,
+			"status" => 		$project->status,
+			"start_date" => 	$project->start_date,
+			"end_date" => 		$project->end_date,
+			"price" => 			$project->price,
+			"proj_manager" => 	$project->proj_manager,
+			"misc" => 			unserialize($project->misc)
+		);
+		if( !is_array( $projs[$project->id]["misc"] ) ) $projs[$project->id]["misc"] = array( 'features' => $projs[$project->id]["misc"] );
+	}}
+	return $projs;
+}
+function t8_pm_cli_status() {
+	global $wpdb; 
+
+	$cliid = intval($_POST['cliid']);
+	$status = intval($_POST['status']);
+	$task_array = array(
+		'status' => $status,
+	);
+	$results = $wpdb->update( $wpdb->prefix . 'pm_cli', $task_array, array('id' => $cliid) );
+	if ( $results ) {
+		$message = __('Client was moved', 't8-pm');
+		echo $message;
+	}
+	die();
+}
+add_action('wp_ajax_t8_pm_cli_status', 't8_pm_cli_status');
 
 /**
  * Milestone and task form table.
@@ -570,17 +634,26 @@ function t8_pm_display_schedule( $proj_id ) {
 	if($project){
 		// first check to see if sched is up to date
 		$pm_schedule = json_decode( $project->schedule, true );
+		// get last work day before today
 		$yesterday = date("Y-m-d", time() - 60 * 60 * 24);
-		$yestercheck = 0;
-		if (isset($pm_schedule[$yesterday])) {
-			foreach ($pm_schedule[$yesterday] as $assign => $assR) {
-				if( $assR['hours'] ) $yestercheck = 1;
-			}
+		if( $project->start_date <= $yesterday ){ // don't recalc sched if start date is still in the future
+			// get the workdays in this project up until yesterday
+			$work_days_check = t8_pm_getWorkDays( $project->start_date, $yesterday, 20 );
+			end($work_days_check);
+			$yesterday = key($work_days_check);
+			$yestercheck = 0;
+
+			if (isset($pm_schedule[$yesterday])) {
+				foreach ($pm_schedule[$yesterday] as $assign => $assR) {
+					if( $assR['hours'] ) $yestercheck = 1;
+				}
+			} //elseif ()
+			if( $yestercheck || empty($pm_schedule ) ) {
+				echo 'RESCHED';
+				$resched = t8_pm_schedule( $proj_id, $project->start_date, $project->end_date );
+				$pm_schedule = $resched['pm_schedule'];
+			} 
 		}
-		if( $yestercheck || empty($pm_schedule) ) {
-			$resched = t8_pm_schedule( $proj_id, $project->start_date, $project->end_date );
-			$pm_schedule = $resched['pm_schedule'];
-		} 
 
 		$proj_hoursRaw = $project->est_hours;
 		$stgHrs = array();
@@ -607,9 +680,6 @@ function t8_pm_display_schedule( $proj_id ) {
 		$proj_hourstot = 0;
 		if( !empty( $pm_schedule ) ){ foreach( $pm_schedule as $date => $dateR ){
 			foreach ($dateR as $assign => $sched_day) {
-			//	$date = strtotime( $sched->date );
-			//	$pm_schedule[$sched->assign][$date]['hours'] = $sched->hours;
-			//	$pm_schedule[$sched->assign][$date]['task_times'] = json_decode( $sched->task_times );
 				if( !isset($dly_cpcty[$date]) ) $dly_cpcty[$date] = 0;
 				$dly_cpcty[$date] += $sched_day['hours'];
 				$proj_hourstot += $sched_day['hours'];
@@ -834,10 +904,13 @@ function t8_pm_get_client($task_id) {
 * Display Capacity Clendar
 * 
 * Displays the Capacity calendar
+*
+* @see 
+*
 */
 // !!! really need to fix this
-function t8_pm_cap_calendar( $pm_users ) {
-	global $wpdb;
+function t8_pm_cap_calendar() {
+	global $wpdb, $pm_users;
 	date_default_timezone_set("America/New_York");
 		$stgHrs= array ();
 		//Get Time with this Project id
@@ -869,19 +942,15 @@ function t8_pm_cap_calendar( $pm_users ) {
 			WHERE start_date <= CURDATE() 
 			AND status = '1'"  
 		); // collect Project
-		$cli_results = 0;
 		if($proj_results){ foreach($proj_results as $proj){ // build array with id as key
-			$t8_pm_projs[$proj->id]['name'] = $proj->name;
-			$t8_pm_projs[$proj->id]['cli'] = $proj->cli_id;
-			$t8_pm_projs[$proj->id]['sched'] = json_decode( $proj->schedule, true );
+			$projects[$proj->id]['name'] = $proj->name;
+			$projects[$proj->id]['cli'] = $proj->cli_id;
+			$projects[$proj->id]['sched'] = json_decode( $proj->schedule, true );
 			$cli_ids[] = $proj->cli_id;
 		}}
-		if (!empty($cli_ids)) $cli_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . "pm_cli WHERE id IN (" . implode(',', $cli_ids ).")" ); // collect Project
-		if($cli_results){ foreach($cli_results as $cli){ // build array with id as key
-			$t8_pm_clis[$cli->id] = $cli->name;
-		}}
+		if (!empty($cli_ids)) $clients = t8_pm_get_clis( $cli_ids );
 		$proj_hourstot = 0;
-		if( isset( $t8_pm_projs ) ){ foreach($t8_pm_projs as $proj_id => $projR ){ // build array with id as key
+		if( isset( $projects ) ){ foreach($projects as $proj_id => $projR ){ // build array with id as key
 			if( !empty($projR['sched']) ){
 				foreach ($projR['sched'] as $date => $dateR){
 					foreach($dateR as $assign => $schedR){
@@ -945,21 +1014,23 @@ function t8_pm_cap_calendar( $pm_users ) {
                   			<?php	
 							$divText = $hours = '';
 							if (isset($dateR[$day])) {
-								foreach($dateR[$day] as $proj_id => $projR) {
-									//echo '<pre>'; print_r($projR); echo '</pre>';
+								foreach($dateR[$day] as $pid => $projR) {
 									$hours += $projR["hours"];
 									$divText .= '<div class="user-'. $pm_users[$assign]["uslug"] . '">
-										'. $t8_pm_clis[$t8_pm_projs[$proj_id]['cli']] .'::'. $t8_pm_projs[$proj_id]['name'] .'
+										'. $clients[$projects[$pid]['cli']]['name'] .'::'. $projects[$pid]['name'] .'
 										<strong>'.round(100*$projR["hours"])/100 . '</strong>
 									</div>';
 								}
 							}
 							//$dtime = strtotime( $day );
 							if( isset( $pm_time[$assign][$day] ) ){
-								foreach($pm_time[$assign][$day] as $proj_id => $projR) {
+								foreach($pm_time[$assign][$day] as $pid => $projR) {
+									if( !isset($projects[$pid]['name']) ) $projects[$pid]['name'] = '';
+									if( !isset($projects[$pid]['cli']) ) $projects[$pid]['cli'] = 0;
+									if( !isset($clients[$projects[$pid]['cli']]['name']) ) $clients[$projects[$pid]['cli']]['name'] = '';
 									$hours += $projR["hours"];
 									$divText .=  '<div class="punched user-'. $pm_users[$assign]["uslug"] . '">
-										'. $t8_pm_clis[$t8_pm_projs[$proj_id]['cli']] .'::'. $t8_pm_projs[$proj_id]['name'] .'
+										'. $clients[$projects[$pid]['cli']]['name'] .'::'. $projects[$pid]['name'] .'
 										<strong>'.round(100*$projR["hours"])/100 . '</strong>
 									</div>';
 								}
@@ -1090,7 +1161,7 @@ function t8_pm_totals ($projquery){
 /**
  * Build array of business days between two dates. Skips the holidays.
  */
-function t8_pm_getWorkDays($startDate,$endDate, $proj_hours){
+function t8_pm_getWorkDays( $startDate, $endDate, $proj_hours ){
     // do strtotime calculations just once
     $day_stamp = strtotime($startDate);
     $end_stamp = strtotime($endDate);
@@ -1144,21 +1215,24 @@ function t8_pm_getWorkDays($startDate,$endDate, $proj_hours){
 	foreach($dly_cpcty as $date => $cap){
 		if( strtotime( $date ) > $yester ) $i++;
 	}
-	$dly_hrs = $proj_hours/$i;
+	if( $i ) {
+		$dly_hrs = $proj_hours/$i;
+	} else {
+		$dly_hrs = 0;
+	}
 	foreach($dly_cpcty as $date => $cap){
 		$dly_cpcty[$date] = ( strtotime( $date ) > $yester ? $dly_hrs : 0 );
 	}
     return $dly_cpcty;/**/
 } // end function getWorkDays
-/*Example:
-$holidays=array("2008-12-25","2008-12-26","2009-01-01");
-echo getWorkDays("2008-12-22","2009-01-02",$holidays)
-// => will return 7 */
 
 /**
- * PUNCHCLOCK Functions
- */
-/* Get task build cat array */
+ * Get Client(s) organized by status.
+ *
+ * @return  array $return list of clients with data status then id 
+*/
+
+// !!! this is very similar to t8_pm_get_clis, consider merging. Also status on cli might not be necessary, instead go by active projects under cli to determine 'status'
 function t8_pm_get_catsarray() {
    	global $wpdb;
 	$return = array();
@@ -1294,6 +1368,30 @@ function t8_pm_projtotrash() {
 		die();
 	}	
 add_action('wp_ajax_t8_pm_projtotrash', 't8_pm_projtotrash');
+
+// delete proj and its data
+function t8_pm_delproj() {
+   	global $wpdb;
+		if (! wp_verify_nonce($_POST['nonce'], 't8_pm_nonce') ){
+			die('Bad Nonce');
+		}
+		$proj_id = intval( $_POST['proj_id'] );
+		
+		$resultsproj = $wpdb->delete( $wpdb->prefix . 'pm_projects', array('id' => $proj_id, 'status' => 3 ) );
+		
+		if( $resultsproj ) {
+			$task_results = $wpdb->delete( $wpdb->prefix . 'pm_tasks', array('proj_id' => $proj_id ) );
+			$return = '<p>Project deleted</p>';
+			if( $task_results ){
+				$return .= '<p>Project data deleted</p>';
+			}
+		} else {
+			$return = '<p>Project could not be deleted</p>';
+		}
+		echo $return;
+		die();
+	}	
+add_action('wp_ajax_t8_pm_delproj', 't8_pm_delproj');
 
 /* PUNCH IN */
 function t8_pm_pc_punchin() {
@@ -1497,26 +1595,6 @@ function t8_pm_tasksubmit() {
 }
 add_action('wp_ajax_t8_pm_tasksubmit', 't8_pm_tasksubmit');
 
-/* Handle Notes Saving by task 
-function t8_pm_cli_status() {
-	global $wpdb; 
-
-	$cliid = intval($_POST['cliid']);
-	$status = intval($_POST['status']);
-	$task_array = array(
-		'status' => $status,
-	);
-	$results = $wpdb->update( $wpdb->prefix . 'pm_cli', $task_array, array('id' => $cliid) );
-	if ( $results ) {
-		$message = __('Client was moved', 't8-pm');
-		echo $message;
-	}
-	die();
-}
-add_action('wp_ajax_t8_pm_cli_status', 't8_pm_cli_status');
-
-*/
-
 function t8_pm_today_task_flyout() {
 	global $wpdb, $current_user;
 	$wpdb->show_errors();
@@ -1618,107 +1696,19 @@ function t8_pm_today_task_flyout() {
 		<?php 
 			}
 		}
-	}/**/
+	}
 	// echo '<pre>'; print_r($t8_pm_p_milestones); echo'</pre>'; 
     die();
 }
 add_action('wp_ajax_t8_pm_show_stage', 't8_pm_today_task_flyout');
 
-/* Build proj and cli lists on cli change */
-// !!! I think this is replaced with pc_drops
-function t8_pm_find_dash_cli_tasks() {
-   	global $wpdb, $userdata;
-	$wpdb->show_errors();
-		if (! wp_verify_nonce($_POST['nonce'], 't8_pm_nonce') ){
-			die();
-		}
-		$newclient = intval($_POST['cli']);
-
-		if($newclient!=''){ // if client field is not empty
-			$table_name = $wpdb->prefix . 'pm_projects';
-			$query = "SELECT id, name FROM ".$table_name." WHERE cli_id = ".$newclient;
-			$results = $wpdb->get_results( $query );
-			$addprojlist = '';
-			$first_proj = 0;
-			if($results){
-				foreach($results as $result){
-					$addprojlist .= '<option value="'.$result->id.'">'.$result->name.'</option>';
-					if( !$first_proj ) $first_proj = $result->id;
-				}
-			}
-			if( $first_proj ){
-				$table_name = $wpdb->prefix . 'pm_tasks';
-				$query = "SELECT id, task_title FROM ".$table_name." WHERE proj_id = ".$first_proj;
-				$results1 = $wpdb->get_results( $query );
-				$addtasklist = '';
-				if($results1){
-					foreach($results1 as $result){
-						$addtasklist .= '<option'.$sel.' value="'.$result->id.'">'.$result->task_title.'</option>';
-					}
-				}
-			}
-		}
-		if ( $results ) {
-			$return['projs'] = $addprojlist;
-			echo json_encode($return);
-		}
-		else echo $newclient;
-
-		die();
-
-}
-add_action('wp_ajax_t8_pm_find_dash_cli_tasks', 't8_pm_find_dash_cli_tasks');
-
-/* Build proj and task lists on cli change */
-// !!! I think this is replaced with pc_drops
-function t8_pm_find_dash_proj_tasks() {
-   	global $wpdb, $userdata;
-	$wpdb->show_errors();
-		if (! wp_verify_nonce($_POST['nonce'], 't8_pm_nonce') ){
-			die();
-		}
-		$newproj = intval($_POST['proj']);
-
-		if($newproj!=''){ // if client field is not empty
-			$table_name = $wpdb->prefix . 'pm_tasks';
-			$query = "SELECT id, task_title FROM ".$table_name." WHERE proj_id = ".$newproj;
-			$results = $wpdb->get_results( $query );
-			$addtasklist = 'huh';
-			if($results){
-				foreach($results as $result){
-					$addtasklist .= '<option value="'.$result->id.'">'.$result->task_title.'</option>';
-				}
-			}
-
-		}
-		if ( $results ) {
-			$return['tasks'] = $addtasklist;
-			echo json_encode($return);
-		}else{
-			echo $newproj;
-		}
-		die();
-}
-add_action('wp_ajax_t8_pm_find_dash_proj_tasks', 't8_pm_find_dash_proj_tasks');
-
 // Save Today's Tasks to usermeta
 function t8_pm_update_todays_tasks() {
    	global $wpdb, $userdata;
-	$wpdb->show_errors();
-		if (! wp_verify_nonce($_POST['nonce'], 't8_pm_nonce') ){
-			die();
-		}
-	//Client list
-	$cli_results = $wpdb->get_results("SELECT * FROM ".$wpdb->prefix . 'pm_cli' ); // collect Client names and id
-	if($cli_results){ foreach($cli_results as $client){ // build array with id as key
-		$clients[$client->id]["name"] = $client->name;
-	}}
-	//Project Name list
-	$proj_name_results = $wpdb->get_results("SELECT id, name FROM ".$wpdb->prefix . 'pm_projects' ); // collect Project names and id
-	if($proj_name_results){ foreach($proj_name_results as $proj){
-		$projnames[$proj->id]['name'] = $proj->name;
-	}}
-	
+	$wpdb->show_errors(); // !!! read up on this
+	if (! wp_verify_nonce($_POST['nonce'], 't8_pm_nonce') ){
+		die();
+	}	
 	$year = intval($_POST['year']);
 	$day = intval($_POST['day']);
 	$tasklist = $_POST['tasklist'];
